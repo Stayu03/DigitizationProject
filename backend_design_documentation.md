@@ -16,25 +16,27 @@ The Digitization Process Management System is designed to facilitate the efficie
 The following is the database schema for the system:
 
 - **Users**  
-  - `id` (Primary Key, Integer)  
-  - `username` (String)  
-  - `password_hash` (String)  
-  - `email` (String)  
-  - `role` (String)
+  - `Email` (Primary Key, String)  
+  - `Name` (String)  
+  - `Password` (String)  
+  - `Role` (String)
+  - `Note` (String)
 
 - **Documents**  
-  - `id` (Primary Key, Integer)  
-  - `user_id` (Foreign Key, Integer)  
-  - `title` (String)  
-  - `file_path` (String)  
-  - `created_at` (Datetime)
+  - `FileName` (Primary Key, String)
+  - `Name` (Foreign Key, String)  
+  - `BIB' (String)  
+  - `CallNumber` (String)
+  - `Collection' (String)
+  - `PublishDate' (Integer)  
+  - `FilePath` (String)  
+  - `CreatedAt` (Datetime)
 
-- **Digitization Processes**  
-  - `id` (Primary Key, Integer)  
-  - `document_id` (Foreign Key, Integer)  
-  - `status` (String)  
-  - `started_at` (Datetime)  
-  - `completed_at` (Datetime)
+- **Processes Tracking**  
+  - `TransactionID` (Primary Key, Integer)  
+  - `FileName` (Foreign Key, String)
+  - `Status` (String)  
+  - `Completed_At` (Datetime)
 
 ## 3. Models
 ### User Model
