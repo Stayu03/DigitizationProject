@@ -106,16 +106,22 @@ def authenticate_user(conn: sqlite3.Connection, email: str, password: str) -> Op
 	return dict(row) if row else None
 
 
+def _validate_password(password: str) -> None:
+    """Require password to be at least 8 characters."""
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters long.")
+
 def add_user(conn: sqlite3.Connection, email: str, name: str, password: str, role: str, note: str = "") -> None:
-	"""Create a new user account."""
-	conn.execute(
-		"""
-		INSERT INTO users (email, name, password, role, note)
-		VALUES (?, ?, ?, ?, ?)
-		""",
-		(email.strip().lower(), name.strip(), hash_password(password), role, note.strip()),
-	)
-	conn.commit()
+    """Create a new user account."""
+    _validate_password(password)
+    conn.execute(
+        """
+        INSERT INTO users (email, name, password, role, note)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (email.strip().lower(), name.strip(), hash_password(password), role, note.strip()),
+    )
+    conn.commit()
 
 
 def list_users(conn: sqlite3.Connection) -> list[dict[str, Any]]:
@@ -126,42 +132,47 @@ def list_users(conn: sqlite3.Connection) -> list[dict[str, Any]]:
 
 
 def add_document(
-	conn: sqlite3.Connection,
-	file_name: str,
-	name: str,
-	bib: str,
-	call_number: str,
-	collection: str,
-	publish_date: Optional[int],
-	file_path: str,
-	created_at: Optional[str] = None,
+    conn: sqlite3.Connection,
+    file_name: str,
+    name: str,
+    bib: str,
+    call_number: str,
+    collection: str,
+    publish_date: Optional[int],
+    file_path: str,
+    created_at: Optional[str] = None,
 ) -> None:
-	"""Insert document and initialize process tracking with Pending status."""
-	timestamp = created_at or _iso_now()
-	conn.execute(
-		"""
-		INSERT INTO documents (
-			file_name, name, bib, call_number, collection, publish_date, file_path, created_at
-		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		""",
-		(
-			file_name.strip(),
-			name.strip(),
-			bib.strip(),
-			call_number.strip(),
-			collection.strip(),
-			publish_date,
-			file_path.strip(),
-			timestamp,
-		),
-	)
-	conn.execute(
-		"INSERT INTO process_tracking (file_name, status, completed_at) VALUES (?, ?, ?)",
-		(file_name.strip(), "Pending", None),
-	)
-	conn.commit()
+    """Create a new document and initialize process status as Pending."""
+    created_at_value = created_at or _iso_now()
 
+    conn.execute(
+        """
+        INSERT INTO documents (
+            file_name, name, bib, call_number, collection, publish_date, file_path, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            file_name.strip(),
+            name.strip(),
+            bib.strip(),
+            call_number.strip(),
+            collection.strip(),
+            publish_date,
+            file_path.strip(),
+            created_at_value,
+        ),
+    )
+
+    conn.execute(
+        """
+        INSERT INTO process_tracking (file_name, status, completed_at)
+        VALUES (?, ?, ?)
+        """,
+        (file_name.strip(), "Pending", None),
+    )
+
+    conn.commit()
 
 def list_documents(conn: sqlite3.Connection) -> list[dict[str, Any]]:
 	"""List documents with their latest tracking status."""
@@ -249,10 +260,38 @@ def list_status_counts(conn: sqlite3.Connection) -> list[dict[str, Any]]:
 	).fetchall()
 	return [dict(row) for row in rows]
 
+# The above function initializes the database and seeds default users. Below is an extended version that also adds a sample user and document for testing purposes.
 
 def run_startup(db_path: str = DEFAULT_DB_PATH) -> sqlite3.Connection:
-	"""Initialize database and return ready-to-use connection."""
-	conn = get_connection(db_path)
-	init_database(conn)
-	seed_default_users(conn)
-	return conn
+    """Initialize database and return ready-to-use connection."""
+    conn = get_connection(db_path)
+    init_database(conn)
+    seed_default_users(conn)
+
+    try:
+        add_user(
+            conn,
+            "somyingjd@gmail.com",
+            "สมหญิง ใจดี",
+            "12345678",
+            "Staff",
+            "manual test user",
+        )
+    except (sqlite3.IntegrityError, ValueError):
+        pass
+
+    try:
+        add_document(
+            conn,
+            "doc001",
+            "สมหญิง ใจดี",  # ต้องตรงกับ users.name (foreign key)
+            "BIB001",
+            "QA123 .P9",
+            "General Collection",
+            2024,
+            "/tmp/doc001.pdf",
+        )
+    except sqlite3.IntegrityError:
+        pass
+
+    return conn

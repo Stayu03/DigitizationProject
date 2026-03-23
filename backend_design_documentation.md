@@ -4,8 +4,7 @@
 1. Introduction
 2. Database Schema
 3. Models
-4. Implementation Roadmap
-5. Architectural Patterns
+4. Architectural Patterns
 
 ---
 
