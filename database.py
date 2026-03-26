@@ -38,7 +38,7 @@ def init_database(conn: sqlite3.Connection) -> None:
         """
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
-            name TEXT NOT NULL UNIQUE,
+            user_name TEXT NOT NULL UNIQUE,
             password TEXT NOT NULL,
             role TEXT NOT NULL CHECK (role IN ('Staff', 'Admin')),
             note TEXT DEFAULT ''
@@ -54,7 +54,7 @@ def init_database(conn: sqlite3.Connection) -> None:
             publish_date INTEGER,
             file_path TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL,
-            FOREIGN KEY (user_name) REFERENCES users(name)
+            FOREIGN KEY (user_name) REFERENCES users(user_name)
         );
 
         CREATE TABLE IF NOT EXISTS process_tracking (
@@ -88,7 +88,7 @@ def init_database(conn: sqlite3.Connection) -> None:
                 publish_date INTEGER,
                 file_path TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL,
-                FOREIGN KEY (user_name) REFERENCES users(name)
+                FOREIGN KEY (user_name) REFERENCES users(user_name)
             );
             """
         )
@@ -125,7 +125,7 @@ def _validate_password(password: str) -> None:
 def add_user(
     conn: sqlite3.Connection,
     email: str,
-    name: str,
+    user_name: str,
     password: str,
     role: str,
     note: str = "",
@@ -134,10 +134,10 @@ def add_user(
     _validate_password(password)
     conn.execute(
         """
-        INSERT INTO users (email, name, password, role, note)
+        INSERT INTO users (email, user_name, password, role, note)
         VALUES (?, ?, ?, ?, ?)
         """,
-        (email.strip().lower(), name.strip(), hash_password(password), role, note.strip()),
+        (email.strip().lower(), user_name.strip(), hash_password(password), role, note.strip()),
     )
     conn.commit()
 
@@ -147,14 +147,14 @@ def seed_default_users(conn: sqlite3.Connection) -> None:
     seed_rows = [
         {
             "email": "admin@digitization.local",
-            "name": "Admin User",
+            "user_name": "Admin User",
             "password": hash_password("admin123"),
             "role": "Admin",
             "note": "Default admin account",
         },
         {
             "email": "staff@digitization.local",
-            "name": "Staff User",
+            "user_name": "Staff User",
             "password": hash_password("staff123"),
             "role": "Staff",
             "note": "Default staff account",
@@ -163,8 +163,8 @@ def seed_default_users(conn: sqlite3.Connection) -> None:
 
     conn.executemany(
         """
-        INSERT INTO users (email, name, password, role, note)
-        VALUES (:email, :name, :password, :role, :note)
+        INSERT INTO users (email, user_name, password, role, note)
+        VALUES (:email, :user_name, :password, :role, :note)
         ON CONFLICT(email) DO NOTHING;
         """,
         seed_rows,
@@ -175,16 +175,16 @@ def seed_default_users(conn: sqlite3.Connection) -> None:
 def authenticate_user(conn: sqlite3.Connection, email: str, password: str) -> Optional[dict[str, Any]]:
     """Validate user credentials and return user record when valid."""
     row = conn.execute(
-        "SELECT email, name, role, note FROM users WHERE email = ? AND password = ?",
+        "SELECT email, user_name, role, note FROM users WHERE email = ? AND password = ?",
         (email.strip().lower(), hash_password(password)),
     ).fetchone()
     return dict(row) if row else None
 
 
 def list_users(conn: sqlite3.Connection) -> list[dict[str, Any]]:
-    """List all users ordered by role and name."""
+    """List all users ordered by role and user_name."""
     rows = conn.execute(
-        "SELECT email, name, role, note FROM users ORDER BY role DESC, name ASC"
+        "SELECT email, user_name, role, note FROM users ORDER BY role DESC, user_name ASC"
     ).fetchall()
     return [dict(row) for row in rows]
 
