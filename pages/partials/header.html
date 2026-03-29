@@ -6,7 +6,28 @@
     </div>
   </div>
 
-  <div class="header-center">{{ page_title or "Dashboard" }}</div>
+  <div class="header-center">
+    {% set header_title = page_title or "Dashboard" %}
+    {% if '>' in header_title %}
+      {% set crumbs = header_title.split('>') %}
+      <div class="header-breadcrumb">
+        {% for crumb in crumbs[:-1] %}
+          {% set crumb_text = crumb|trim %}
+          <span class="crumb-segment prev">{{ crumb_text }}</span>
+          {% if not loop.last %}
+          <span class="crumb-separator">></span>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <div class="header-title">
+        {{ crumbs[-1]|trim }}
+      </div>
+    {% else %}
+      <div class="header-title">
+        <span class="crumb-segment current">{{ header_title }}</span>
+      </div>
+    {% endif %}
+  </div>
 
   <div class="header-user">
     <div class="user-name-box">{{ session.get('user_name', 'User') }}</div>

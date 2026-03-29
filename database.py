@@ -22,6 +22,12 @@ def _tracking_has_updated_by(conn: sqlite3.Connection) -> bool:
     return "updated_by" in cols
 
 
+def _tracking_has_note(conn: sqlite3.Connection) -> bool:
+    """Check whether process_tracking has note column."""
+    cols = [row["name"] for row in conn.execute("PRAGMA table_info(process_tracking)").fetchall()]
+    return "note" in cols
+
+
 def hash_password(raw_password: str) -> str:
     """Hash raw password using SHA-256 for simple authentication flows."""
     return hashlib.sha256(raw_password.encode("utf-8")).hexdigest()
@@ -71,6 +77,7 @@ def init_database(conn: sqlite3.Connection) -> None:
             status TEXT NOT NULL,
             completed_at TEXT,
             updated_by TEXT,
+            note TEXT DEFAULT '',
             FOREIGN KEY (file_name) REFERENCES documents(file_name)
         );
         """
@@ -80,6 +87,14 @@ def init_database(conn: sqlite3.Connection) -> None:
     if "updated_by" not in tracking_cols:
         try:
             conn.execute("ALTER TABLE process_tracking ADD COLUMN updated_by TEXT;")
+        except sqlite3.OperationalError:
+            # If another process locks schema during startup, keep app running.
+            pass
+
+    tracking_cols = [row["name"] for row in conn.execute("PRAGMA table_info(process_tracking)").fetchall()]
+    if "note" not in tracking_cols:
+        try:
+            conn.execute("ALTER TABLE process_tracking ADD COLUMN note TEXT DEFAULT '';")
         except sqlite3.OperationalError:
             # If another process locks schema during startup, keep app running.
             pass
@@ -241,13 +256,32 @@ def add_document(
         ),
     )
 
-    if _tracking_has_updated_by(conn):
+    has_updated_by = _tracking_has_updated_by(conn)
+    has_note = _tracking_has_note(conn)
+
+    if has_updated_by and has_note:
+        conn.execute(
+            """
+            INSERT INTO process_tracking (file_name, status, completed_at, updated_by, note)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (file_name.strip(), "คัดเลือกเอกสาร", created_at_value, user_name.strip(), ""),
+        )
+    elif has_updated_by:
         conn.execute(
             """
             INSERT INTO process_tracking (file_name, status, completed_at, updated_by)
             VALUES (?, ?, ?, ?)
             """,
             (file_name.strip(), "คัดเลือกเอกสาร", created_at_value, user_name.strip()),
+        )
+    elif has_note:
+        conn.execute(
+            """
+            INSERT INTO process_tracking (file_name, status, completed_at, note)
+            VALUES (?, ?, ?, ?)
+            """,
+            (file_name.strip(), "คัดเลือกเอกสาร", created_at_value, ""),
         )
     else:
         conn.execute(
@@ -324,15 +358,41 @@ def add_process_tracking(
     status: str,
     completed_at: Optional[str] = None,
     updated_by: Optional[str] = None,
+    note: str = "",
 ) -> None:
     """Append a status transaction for the given document."""
-    if _tracking_has_updated_by(conn):
+    has_updated_by = _tracking_has_updated_by(conn)
+    has_note = _tracking_has_note(conn)
+
+    if has_updated_by and has_note:
+        conn.execute(
+            """
+            INSERT INTO process_tracking (file_name, status, completed_at, updated_by, note)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                file_name.strip(),
+                status.strip(),
+                completed_at,
+                (updated_by or "").strip() or None,
+                (note or "").strip(),
+            ),
+        )
+    elif has_updated_by:
         conn.execute(
             """
             INSERT INTO process_tracking (file_name, status, completed_at, updated_by)
             VALUES (?, ?, ?, ?)
             """,
             (file_name.strip(), status.strip(), completed_at, (updated_by or "").strip() or None),
+        )
+    elif has_note:
+        conn.execute(
+            """
+            INSERT INTO process_tracking (file_name, status, completed_at, note)
+            VALUES (?, ?, ?, ?)
+            """,
+            (file_name.strip(), status.strip(), completed_at, (note or "").strip()),
         )
     else:
         conn.execute(
@@ -385,7 +445,10 @@ def update_document_details(
 
 def list_document_updates(conn: sqlite3.Connection, file_name: str) -> list[dict[str, Any]]:
     """List all update transactions for a document with responsible user."""
-    if _tracking_has_updated_by(conn):
+    has_updated_by = _tracking_has_updated_by(conn)
+    has_note = _tracking_has_note(conn)
+
+    if has_updated_by and has_note:
         rows = conn.execute(
             """
             SELECT
@@ -393,6 +456,43 @@ def list_document_updates(conn: sqlite3.Connection, file_name: str) -> list[dict
                 p.status,
                 p.completed_at,
                 COALESCE(p.updated_by, d.user_name) AS user_name,
+                COALESCE(p.note, '') AS note,
+                d.created_at
+            FROM process_tracking p
+            INNER JOIN documents d
+                ON d.file_name = p.file_name
+            WHERE p.file_name = ?
+            ORDER BY p.transaction_id DESC
+            """,
+            (file_name,),
+        ).fetchall()
+    elif has_updated_by:
+        rows = conn.execute(
+            """
+            SELECT
+                p.transaction_id,
+                p.status,
+                p.completed_at,
+                COALESCE(p.updated_by, d.user_name) AS user_name,
+                '' AS note,
+                d.created_at
+            FROM process_tracking p
+            INNER JOIN documents d
+                ON d.file_name = p.file_name
+            WHERE p.file_name = ?
+            ORDER BY p.transaction_id DESC
+            """,
+            (file_name,),
+        ).fetchall()
+    elif has_note:
+        rows = conn.execute(
+            """
+            SELECT
+                p.transaction_id,
+                p.status,
+                p.completed_at,
+                d.user_name,
+                COALESCE(p.note, '') AS note,
                 d.created_at
             FROM process_tracking p
             INNER JOIN documents d
@@ -410,6 +510,7 @@ def list_document_updates(conn: sqlite3.Connection, file_name: str) -> list[dict
                 p.status,
                 p.completed_at,
                 d.user_name,
+                '' AS note,
                 d.created_at
             FROM process_tracking p
             INNER JOIN documents d

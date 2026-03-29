@@ -278,23 +278,9 @@ def process_tracking_page(file_name):
         return "Forbidden", 403
 
     if request.method == "POST":
-        selected_status = request.form.get("status", "").strip()
-        update_now = request.form.get("update_now") == "1"
+        action = request.form.get("action", "").strip()
 
-        if selected_status and selected_status in PROCESS_STATUSES:
-            completed_at = request.form.get("completed_at", "").strip() or None
-            if update_now or not completed_at:
-                completed_at = datetime.utcnow().replace(microsecond=0).isoformat()
-
-            add_process_tracking(
-                conn,
-                file_name,
-                selected_status,
-                completed_at,
-                session.get("user_name"),
-            )
-
-        if session.get("user_role") == "Admin":
+        if action == "edit_details" and session.get("user_role") == "Admin":
             publish_date_raw = request.form.get("publish_date", "").strip()
             publish_date = int(publish_date_raw) if (publish_date_raw and publish_date_raw.isdigit()) else None
             update_document_details(
@@ -308,6 +294,24 @@ def process_tracking_page(file_name):
                 publish_date,
                 request.form.get("file_path", "").strip(),
             )
+
+        if action == "update_status":
+            selected_status = request.form.get("status", "").strip()
+            completed_at = request.form.get("completed_at", "").strip() or None
+            note = request.form.get("note", "").strip()
+
+            if selected_status in PROCESS_STATUSES:
+                if not completed_at:
+                    completed_at = datetime.utcnow().replace(microsecond=0).isoformat()
+
+                add_process_tracking(
+                    conn,
+                    file_name,
+                    selected_status,
+                    completed_at,
+                    session.get("user_name"),
+                    note,
+                )
 
         return redirect(url_for("process_tracking_page", file_name=file_name, source="update"))
 
@@ -323,6 +327,7 @@ def process_tracking_page(file_name):
             latest_by_status[status_name] = item
 
     current_idx = PROCESS_STATUSES.index(latest_status) if latest_status in PROCESS_STATUSES else -1
+    latest_update = updates_asc[-1] if updates_asc else None
 
     timeline = []
     for idx, status_name in enumerate(PROCESS_STATUSES):
@@ -355,6 +360,8 @@ def process_tracking_page(file_name):
         breadcrumb=breadcrumb,
         is_new_case=is_new_case,
         timeline=timeline,
+        latest_status=latest_status or PROCESS_STATUSES[0],
+        latest_note=(latest_update.get("note") if latest_update else "") or "",
         process_statuses=PROCESS_STATUSES,
         can_edit_detail=session.get("user_role") == "Admin",
         users=list_users(conn) if session.get("user_role") == "Admin" else [],

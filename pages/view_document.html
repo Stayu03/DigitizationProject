@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ document.title or 'Document Detail' }}{% endblock %}
+{% block title %}เอกสารทั้งหมด > {{ document.title or document.file_name or 'Document Detail' }}{% endblock %}
 
 {% block content %}
 <section class="card">
@@ -37,7 +37,7 @@
       background: #f8e1ea;
       color: #de5c8e;
       font-size: 24px;
-      font-weight: 500;
+      font-weight: 400;
       padding: 10px 16px;
       border-radius: 10px;
       max-width: 62%;

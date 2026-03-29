@@ -30,13 +30,13 @@
     }
 
     .app-header {
-      height: 84px;
+      height: 92px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 22px;
-      background: var(--white);
-      border-bottom: 1px solid var(--line);
+      background: #de5c8e;
+      border-bottom: 1px solid #cf4f80;
       position: sticky;
       top: 0;
       z-index: 10;
@@ -48,8 +48,8 @@
     }
 
     .brand {
-      color: var(--pink);
-      font-weight: 600;
+      color: #f8e1ea;
+      font-weight: 400;
       line-height: 1.1;
       letter-spacing: 0.2px;
     }
@@ -62,7 +62,7 @@
     .brand-sub {
       display: block;
       font-size: 12px;
-      color: #7d7f82;
+      color: #f8e1ea;
       margin-top: 2px;
       font-weight: 400;
     }
@@ -70,9 +70,52 @@
     .header-center {
       flex: 1;
       text-align: center;
-      font-size: 22px;
-      color: #404245;
-      font-weight: 500;
+      color: #f8e1ea;
+      font-weight: 400;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      padding: 6px 0;
+      min-height: 100%;
+      overflow: hidden;
+    }
+
+    .header-breadcrumb {
+      font-size: 14px;
+      color: #000;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.85;
+    }
+
+    .header-title {
+      font-size: 28px;
+      color: #f8e1ea;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .crumb-segment {
+      vertical-align: middle;
+    }
+
+    .crumb-segment.prev,
+    .crumb-separator {
+      color: #000;
+    }
+
+    .crumb-segment.current {
+      color: #f8e1ea;
+    }
+
+    .crumb-separator {
+      margin: 0 8px;
+      opacity: 0.8;
     }
 
     .header-user {
