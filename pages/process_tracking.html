@@ -26,22 +26,27 @@
 		}
 
 		.timeline-scroll {
-			overflow-x: auto;
-			padding-bottom: 6px;
+			overflow-x: visible;
+			padding-bottom: 0;
+			margin-bottom: 24px;
 		}
 
 		.timeline {
 			position: relative;
-			min-width: 1320px;
-			padding: 20px 10px;
-			height: 276px;
+			--timeline-line-y: 146px;
+			--line-box-gap: 42px;
+			--box-detail-gap: 10px;
+			width: 100%;
+			min-width: 0;
+			padding: 20px 0;
+			height: 324px;
 		}
 
 		.timeline-line {
 			position: absolute;
 			left: 22px;
 			right: 22px;
-			top: 138px;
+			top: var(--timeline-line-y);
 			height: 4px;
 			background: #de5c8e;
 			border-radius: 999px;
@@ -50,7 +55,7 @@
 		.timeline-start,
 		.timeline-end {
 			position: absolute;
-			top: 114px;
+			top: calc(var(--timeline-line-y) - 24px);
 			font-size: 16px;
 			font-weight: 500;
 			color: #de5c8e;
@@ -70,21 +75,21 @@
 			position: relative;
 			display: flex;
 			justify-content: space-between;
-			gap: 10px;
-			margin: 0 44px;
+			gap: 4px;
+			margin: 0 24px;
 			height: 100%;
 		}
 
 		.timeline-step {
 			position: relative;
 			flex: 1 1 0;
-			min-width: 158px;
+			min-width: 0;
 		}
 
 		.timeline-dot {
 			position: absolute;
 			left: 50%;
-			top: 138px;
+			top: var(--timeline-line-y);
 			transform: translate(-50%, -50%);
 			width: 12px;
 			height: 12px;
@@ -98,28 +103,41 @@
 			position: absolute;
 			left: 50%;
 			transform: translateX(-50%);
-			width: min(158px, 100%);
+			width: fit-content;
+			max-width: calc(100% - 2px);
+			min-width: min(96px, calc(100% - 2px));
+			box-sizing: border-box;
+			height: auto;
 			min-height: 66px;
 			border-radius: 10px;
 			border: 1px solid #000;
 			background: #fff;
 			color: #000;
-			font-size: 16px;
+			font-size: 15px;
 			font-weight: 500;
 			line-height: 1.25;
 			text-align: center;
-			padding: 8px 8px;
+			padding: 8px 10px;
 			display: flex;
 			align-items: center;
 			justify-content: center;
 		}
 
+		.status-text {
+			display: block;
+			max-width: 100%;
+			white-space: normal;
+			word-break: break-word;
+		}
+
 		.timeline-step.is-top .status-box {
-			top: 54px;
+			top: auto;
+			bottom: calc(100% - var(--timeline-line-y) + var(--line-box-gap));
 		}
 
 		.timeline-step.is-bottom .status-box {
-			top: 154px;
+			bottom: auto;
+			top: calc(var(--timeline-line-y) + var(--line-box-gap));
 		}
 
 		.status-box.is-past {
@@ -136,20 +154,14 @@
 
 		.meta-wrap {
 			position: absolute;
-			left: 50%;
-			transform: translateX(-50%);
-			width: min(170px, 100%);
+			left: 0;
+			top: 0;
+			transform: none;
+			width: fit-content;
+			max-width: calc(100% - 8px);
 			display: flex;
 			flex-direction: column;
 			gap: 5px;
-		}
-
-		.timeline-step.is-top .meta-wrap {
-			top: 0;
-		}
-
-		.timeline-step.is-bottom .meta-wrap {
-			top: 224px;
 		}
 
 		.meta-row {
@@ -192,7 +204,13 @@
 			display: grid;
 			grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
 			gap: 20px;
-			margin-top: 12px;
+			margin-top: 28px;
+		}
+
+		.datetime-row {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+			gap: 10px;
 		}
 
 		.middle-divider {
@@ -242,9 +260,27 @@
 			color: #2f3133;
 		}
 
+		.latest-status-field {
+			background: #de5c8e;
+			color: #fff;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+		}
+
 		.info-value {
 			display: flex;
 			align-items: center;
+		}
+
+		.info-input[readonly] {
+			cursor: default;
+		}
+
+		.info-form.editing .info-value,
+		.info-form.editing .info-input {
+			background: #f8e1ea;
 		}
 
 		.note-field {
@@ -331,7 +367,7 @@
 					{% set update = item.update %}
 					<div class="meta-wrap">
 						<div class="meta-row">
-							<span class="meta-badge done">เสร็จ</span>
+							<span class="meta-badge done">วันที่/เวลา</span>
 							{% if update and update.completed_at %}
 							<span class="meta-text">{{ update.completed_at|replace('T', ' ') }}</span>
 							{% else %}
@@ -345,7 +381,7 @@
 					</div>
 
 					<div class="status-box {% if item.state == 'past' %}is-past{% elif item.state == 'current' %}is-current{% endif %}">
-						{{ item.index }}. {{ item.status }}
+						<span class="status-text">{{ item.index }}. {{ item.status }}</span>
 					</div>
 					<div class="timeline-dot" aria-hidden="true"></div>
 				</div>
@@ -359,30 +395,30 @@
 			<h2 class="part-title">ข้อมูลเอกสาร</h2>
 
 			{% if can_edit_detail %}
-			<form method="post" action="{{ url_for('process_tracking_page', file_name=document.file_name, source='update') }}" class="info-form">
+			<form method="post" action="{{ url_for('process_tracking_page', file_name=document.file_name, source='update') }}" class="info-form" id="docInfoForm">
 				<input type="hidden" name="action" value="edit_details">
 				<div class="info-label">รหัสเอกสาร (FileName)</div>
 				<div class="info-value">{{ document.file_name or '-' }}</div>
 
 				<div class="info-label">Bib# (Biliographic Record)</div>
-				<input class="info-input" name="bib" value="{{ document.bib or '' }}">
+				<input class="info-input" name="bib" value="{{ document.bib or '' }}" readonly>
 
 				<div class="info-label">เลขหนังสือ (CallNo)</div>
-				<input class="info-input" name="call_number" value="{{ document.call_number or '' }}">
+				<input class="info-input" name="call_number" value="{{ document.call_number or '' }}" readonly>
 
 				<div class="info-label">คอลเลกชัน (Collection)</div>
-				<input class="info-input" name="collection" value="{{ document.collection or '' }}">
+				<input class="info-input" name="collection" value="{{ document.collection or '' }}" readonly>
 
 				<div class="info-label">ปีที่พิมพ์ (Published Date)</div>
-				<input class="info-input" name="publish_date" type="number" value="{{ document.publish_date or '' }}">
+				<input class="info-input" name="publish_date" type="number" value="{{ document.publish_date or '' }}" readonly>
 
 				<input type="hidden" name="title" value="{{ document.title or '' }}">
 				<input type="hidden" name="user_name" value="{{ document.user_name or '' }}">
 				<input type="hidden" name="file_path" value="{{ document.file_path or '' }}">
 
-				<button class="action-btn edit-btn" type="submit">
-					<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75l11-11-3.75-3.75-11 11zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-					<span>แก้ไขข้อมูล</span>
+				<button class="action-btn edit-btn" type="submit" id="docInfoToggleBtn" data-mode="view">
+					<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" id="docInfoToggleIcon"><path d="M3 17.25V21h3.75l11-11-3.75-3.75-11 11zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+					<span id="docInfoToggleText">แก้ไขข้อมูล</span>
 				</button>
 			</form>
 			{% else %}
@@ -411,14 +447,18 @@
 
 		<div>
 			<h2 class="part-title">การอัปเดตสถานะ</h2>
-			<form method="post" action="{{ url_for('process_tracking_page', file_name=document.file_name, source='update') }}" class="status-form">
+			<form method="post" action="{{ url_for('process_tracking_page', file_name=document.file_name, source='update') }}" class="status-form" id="statusForm">
 				<input type="hidden" name="action" value="update_status">
+				<input type="hidden" name="completed_at" id="completedAt">
 
 				<div class="status-label">สถานะล่าสุดของเอกสาร</div>
-				<div class="status-field">{{ latest_status }}</div>
+				<div class="status-field latest-status-field">{{ latest_status }}</div>
 
 				<div class="status-label">วันที่ดำเนินการเสร็จ</div>
-				<input class="status-field" type="datetime-local" name="completed_at">
+				<div class="datetime-row">
+					<input class="status-field" type="date" name="completed_date" id="completedDate">
+					<input class="status-field" type="time" name="completed_time" id="completedTime" step="60">
+				</div>
 
 				<div class="status-label">สถานะที่ต้องการอัปเดต</div>
 				<div class="radio-list">
@@ -433,12 +473,108 @@
 				<div class="status-label">รายละเอียดเพิ่มเติม</div>
 				<textarea class="note-field" name="note" placeholder="กรอกรายละเอียดเพิ่มเติม...">{{ latest_note }}</textarea>
 
-				<button class="action-btn save-btn" type="submit">
+				<button class="action-btn edit-btn" type="submit">
 					<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM7 5h8v4H7V5zm12 14H5v-8h14v8z"/></svg>
 					<span>บันทึกข้อมูล</span>
 				</button>
 			</form>
 		</div>
 	</div>
+
+	<script>
+		(function () {
+			function alignTimelineMeta() {
+				var timelineEl = document.querySelector(".timeline");
+				var computedGap = timelineEl ? getComputedStyle(timelineEl).getPropertyValue("--box-detail-gap") : "";
+				var detailGap = Number.parseInt(computedGap, 10);
+				if (Number.isNaN(detailGap)) {
+					detailGap = 10;
+				}
+				var steps = document.querySelectorAll(".timeline-step");
+				steps.forEach(function (step) {
+					var statusBox = step.querySelector(".status-box");
+					var metaWrap = step.querySelector(".meta-wrap");
+					if (!statusBox || !metaWrap) {
+						return;
+					}
+
+					var stepRect = step.getBoundingClientRect();
+					var boxRect = statusBox.getBoundingClientRect();
+					var metaRect = metaWrap.getBoundingClientRect();
+					var stepWidth = stepRect.width;
+					var leftOffset = boxRect.left - stepRect.left;
+					var maxLeft = Math.max(0, stepWidth - metaRect.width);
+					var clampedLeft = Math.min(Math.max(0, leftOffset), maxLeft);
+					metaWrap.style.left = clampedLeft + "px";
+
+					var boxTop = boxRect.top - stepRect.top;
+					var boxBottom = boxRect.bottom - stepRect.top;
+					var metaTop;
+					if (step.classList.contains("is-top")) {
+						metaTop = boxTop - metaRect.height - detailGap;
+					} else {
+						metaTop = boxBottom + detailGap;
+					}
+					metaWrap.style.top = metaTop + "px";
+				});
+			}
+
+			window.addEventListener("load", alignTimelineMeta);
+			window.addEventListener("resize", alignTimelineMeta);
+		})();
+	</script>
+
+	<script>
+		(function () {
+			var statusForm = document.getElementById("statusForm");
+			var completedDate = document.getElementById("completedDate");
+			var completedTime = document.getElementById("completedTime");
+			var completedAt = document.getElementById("completedAt");
+			if (!statusForm || !completedDate || !completedTime || !completedAt) {
+				return;
+			}
+
+			statusForm.addEventListener("submit", function () {
+				var dateValue = completedDate.value;
+				var timeValue = completedTime.value;
+				if (dateValue && timeValue) {
+					completedAt.value = dateValue + "T" + timeValue;
+				} else {
+					completedAt.value = "";
+				}
+			});
+		})();
+	</script>
+
+	{% if can_edit_detail %}
+	<script>
+		(function () {
+			var form = document.getElementById("docInfoForm");
+			var toggleBtn = document.getElementById("docInfoToggleBtn");
+			var toggleText = document.getElementById("docInfoToggleText");
+			var toggleIcon = document.getElementById("docInfoToggleIcon");
+			if (!form || !toggleBtn || !toggleText || !toggleIcon) {
+				return;
+			}
+
+			var editableInputs = form.querySelectorAll(".info-input");
+
+			toggleBtn.addEventListener("click", function (event) {
+				if (toggleBtn.dataset.mode === "view") {
+					event.preventDefault();
+					toggleBtn.dataset.mode = "edit";
+					form.classList.add("editing");
+					editableInputs.forEach(function (el) {
+						el.removeAttribute("readonly");
+					});
+					toggleBtn.classList.remove("edit-btn");
+					toggleBtn.classList.add("save-btn");
+					toggleText.textContent = "บันทึกข้อมูล";
+					toggleIcon.innerHTML = '<path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM7 5h8v4H7V5zm12 14H5v-8h14v8z"/>';
+				}
+			});
+		})();
+	</script>
+	{% endif %}
 </section>
 {% endblock %}

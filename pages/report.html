@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}ดาวน์โหลด Report{% endblock %}
+
+{% block content %}
+<section class="card report-card">
+	<style>
+		.report-container {
+			display: grid;
+			grid-template-columns: 1fr 1px 380px;
+			gap: 24px;
+			margin: 0;
+		}
+
+		.report-divider {
+			background: #d7dbe1;
+			border-radius: 99px;
+		}
+
+		.preview-section {
+			min-width: 0;
+		}
+
+		.a4-preview {
+			background: #fff;
+			border: 1px solid #ccc;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			padding: 20px;
+			width: 100%;
+			max-width: 820px;
+			margin: 0 auto;
+			box-sizing: border-box;
+		}
+
+		.a4-title {
+			text-align: center;
+			font-size: 18px;
+			font-weight: 600;
+			margin-bottom: 6px;
+			color: #1f2022;
+		}
+
+		.a4-filter-note {
+			text-align: center;
+			font-size: 13px;
+			color: #58595b;
+			margin-bottom: 14px;
+		}
+
+		.a4-table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 13px;
+		}
+
+		.a4-table thead {
+			background: #f0f0f0;
+			border: 1px solid #999;
+		}
+
+		.a4-table thead th {
+			border: 1px solid #999;
+			padding: 8px 6px;
+			text-align: center;
+			font-weight: 600;
+			color: #1f2022;
+			line-height: 1.2;
+		}
+
+		.a4-table tbody td {
+			border: 1px solid #999;
+			padding: 6px;
+			text-align: left;
+			color: #2f3133;
+			word-wrap: break-word;
+			overflow-wrap: break-word;
+		}
+
+		.a4-table tbody tr:nth-child(even) {
+			background: #fafafa;
+		}
+
+		.options-section {
+			min-width: 0;
+		}
+
+		.option-title {
+			font-size: 16px;
+			font-weight: 600;
+			margin-bottom: 12px;
+			color: #1f2022;
+		}
+
+		.option-group {
+			margin-bottom: 20px;
+		}
+
+		.file-type-label {
+			display: block;
+			margin-bottom: 8px;
+			font-size: 15px;
+			font-weight: 500;
+			color: #2f3133;
+		}
+
+		.radio-option {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 10px;
+			cursor: pointer;
+			padding: 8px;
+			border-radius: 8px;
+			transition: background 0.2s;
+		}
+
+		.radio-option:hover {
+			background: #f5f5f5;
+		}
+
+		.radio-option input[type="radio"] {
+			width: 18px;
+			height: 18px;
+			accent-color: #de5c8e;
+			cursor: pointer;
+		}
+
+		.radio-label {
+			font-size: 15px;
+			color: #2f3133;
+			cursor: pointer;
+			margin: 0;
+		}
+
+		.download-btn {
+			width: 100%;
+			height: 44px;
+			border: 0;
+			border-radius: 10px;
+			background: #32cd32;
+			color: #fff;
+			font-size: 16px;
+			font-family: "Kanit", sans-serif;
+			font-weight: 500;
+			cursor: pointer;
+			margin-bottom: 24px;
+			transition: background 0.2s;
+		}
+
+		.download-btn:hover {
+			background: #28a828;
+		}
+
+		.download-btn:active {
+			background: #209620;
+		}
+
+		.preview-btn {
+			width: 100%;
+			height: 40px;
+			border: 1px solid #58595b;
+			border-radius: 10px;
+			background: #fff;
+			color: #58595b;
+			font-size: 15px;
+			font-family: "Kanit", sans-serif;
+			font-weight: 500;
+			cursor: pointer;
+			margin-bottom: 10px;
+		}
+
+		.filter-section {
+			border-top: 1px solid #e0e0e0;
+			padding-top: 16px;
+		}
+
+		.filter-title {
+			display: block;
+			margin-bottom: 12px;
+			font-size: 14px;
+			font-weight: 600;
+			color: #1f2022;
+		}
+
+		.filter-option {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 8px;
+			cursor: pointer;
+			padding: 6px;
+			border-radius: 6px;
+			transition: background 0.2s;
+		}
+
+		.filter-option:hover {
+			background: #f5f5f5;
+		}
+
+		.filter-option input[type="radio"] {
+			width: 16px;
+			height: 16px;
+			accent-color: #de5c8e;
+			cursor: pointer;
+		}
+
+		.filter-label {
+			font-size: 14px;
+			color: #2f3133;
+			cursor: pointer;
+			margin: 0;
+		}
+
+		@media (max-width: 1200px) {
+			.report-container {
+				grid-template-columns: 1fr;
+			}
+
+			.report-divider {
+				display: none;
+			}
+
+			.a4-preview {
+				max-width: 100%;
+			}
+		}
+	</style>
+
+	<div class="report-container">
+		<!-- Left: A4 Preview -->
+		<div class="preview-section">
+			<div class="a4-preview">
+				<div class="a4-title">รายงานกระบวนการแปลงหนังสือทรงคุณค่า หนังสือหายาก และเอกสารโบราณเป็นดิจิทัลและการจัดทำหนังสืออิเล็กทรอนิกส์</div>
+				<div class="a4-filter-note">ตัวกรองปัจจุบัน: {{ selected_filter_label }}</div>
+				<table class="a4-table">
+					<thead>
+						<tr>
+							<th style="width: 4%">No.</th>
+							<th style="width: 12%">File Name</th>
+							<th style="width: 8%">#BIB</th>
+							<th style="width: 10%">CallNo.</th>
+							<th style="width: 10%">Collection</th>
+							<th style="width: 14%">Title</th>
+							<th style="width: 8%">Published Year</th>
+							<th style="width: 12%">Job Status</th>
+							<th style="width: 10%">Staff</th>
+							<th style="width: 12%">Update Date&Time</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% if report_data %}
+							{% for doc in report_data %}
+							<tr>
+								<td>{{ loop.index }}</td>
+								<td>{{ doc.file_name or '-' }}</td>
+								<td>{{ doc.bib or '-' }}</td>
+								<td>{{ doc.call_number or '-' }}</td>
+								<td>{{ doc.collection or '-' }}</td>
+								<td>{{ doc.title or '-' }}</td>
+								<td>{{ doc.publish_date or '-' }}</td>
+								<td>{{ doc.latest_status or '-' }}</td>
+								<td>{{ doc.latest_user or '-' }}</td>
+								<td>{{ doc.latest_date or '-' }}</td>
+							</tr>
+							{% endfor %}
+						{% else %}
+							<tr>
+								<td colspan="10" style="text-align: center; color: #999; padding: 20px;">ไม่มีข้อมูล</td>
+							</tr>
+						{% endif %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<div class="report-divider"></div>
+
+		<!-- Right: Options & Download -->
+		<div class="options-section">
+			<form method="get" action="{{ url_for('report_page') }}">
+			<!-- File Type Selection -->
+			<div class="option-group">
+				<label class="option-title">เลือกประเภทไฟล์ที่ต้องการดาวน์โหลด</label>
+				<div>
+					<label class="radio-option">
+						<input type="radio" name="file_type" value="csv" {% if selected_file_type == 'csv' %}checked{% endif %}>
+						<span class="radio-label">.CSV</span>
+					</label>
+					<label class="radio-option">
+						<input type="radio" name="file_type" value="xlsx" {% if selected_file_type == 'xlsx' %}checked{% endif %}>
+						<span class="radio-label">.XLSX</span>
+					</label>
+					<label class="radio-option">
+						<input type="radio" name="file_type" value="pdf" {% if selected_file_type == 'pdf' %}checked{% endif %}>
+						<span class="radio-label">.PDF</span>
+					</label>
+				</div>
+			</div>
+
+			<!-- Filter Options -->
+			<div class="filter-section">
+				<label class="filter-title">ตัวกรองการแสดง</label>
+				<div>
+					<label class="filter-option">
+						<input type="radio" name="filter_type" value="all" {% if selected_filter_type == 'all' %}checked{% endif %}>
+						<span class="filter-label">แสดงทั้งหมด</span>
+					</label>
+					<label class="filter-option">
+						<input type="radio" name="filter_type" value="collection" {% if selected_filter_type == 'collection' %}checked{% endif %}>
+						<span class="filter-label">เลือกตาม Collection (เรียงลำดับจากน้อยไปมาก)</span>
+					</label>
+					<label class="filter-option">
+						<input type="radio" name="filter_type" value="status" {% if selected_filter_type == 'status' %}checked{% endif %}>
+						<span class="filter-label">เลือกตาม Job Status (เรียงลำดับจากน้อยไปมาก)</span>
+					</label>
+					<label class="filter-option">
+						<input type="radio" name="filter_type" value="staff" {% if selected_filter_type == 'staff' %}checked{% endif %}>
+						<span class="filter-label">เลือกตาม Staff (เรียงลำดับจากน้อยไปมาก)</span>
+					</label>
+				</div>
+			</div>
+
+			<button class="preview-btn" type="submit">แสดงตัวอย่างตามตัวกรอง</button>
+			<button class="download-btn" type="submit" formaction="{{ url_for('download_report') }}">ดาวน์โหลด Report</button>
+			</form>
+		</div>
+	</div>
+</section>
+{% endblock %}

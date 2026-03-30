@@ -1,7 +1,7 @@
 """Flask application for the Digitization Process Management System."""
 
 import csv
-from io import StringIO
+from io import StringIO, BytesIO
 from datetime import datetime
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response
@@ -160,29 +160,262 @@ def documents_list():
     )
 
 
+
+
+def _build_report_data():
+    """Build report rows with latest status/update metadata for each document."""
+    docs = list_documents(conn)
+    report_data = []
+    for d in docs:
+        latest_status = d.get("current_status", "-")
+        latest_updates = list_document_updates(conn, d.get("file_name", ""))
+        latest_user = "-"
+        latest_date = "-"
+
+        if latest_updates:
+            latest_update = latest_updates[-1]
+            latest_user = latest_update.get("user_name", "-")
+            latest_date = (latest_update.get("completed_at", "") or "-").replace("T", " ")
+
+        report_data.append({
+            "file_name": d.get("file_name", "-"),
+            "bib": d.get("bib", "-"),
+            "call_number": d.get("call_number", "-"),
+            "collection": d.get("collection", "-"),
+            "title": d.get("title", "-"),
+            "publish_date": d.get("publish_date", "-"),
+            "latest_status": latest_status,
+            "latest_user": latest_user,
+            "latest_date": latest_date,
+        })
+    return report_data
+
+
+def _apply_report_filter(report_data, filter_type):
+    """Apply sorting options for report preview/download."""
+    if filter_type == "collection":
+        return sorted(report_data, key=lambda x: (x["collection"] or "").lower())
+    if filter_type == "status":
+        status_order = {status: i for i, status in enumerate(PROCESS_STATUSES)}
+        return sorted(report_data, key=lambda x: status_order.get(x["latest_status"], 999))
+    if filter_type == "staff":
+        return sorted(report_data, key=lambda x: (x["latest_user"] or "").lower())
+    return report_data
+
+
+def _report_filter_label(filter_type):
+    """Return display label for selected report filter."""
+    labels = {
+        "all": "แสดงทั้งหมด",
+        "collection": "เลือกตาม Collection (เรียงลำดับจากน้อยไปมาก)",
+        "status": "เลือกตาม Job Status (เรียงลำดับจากน้อยไปมาก)",
+        "staff": "เลือกตาม Staff (เรียงลำดับจากน้อยไปมาก)",
+    }
+    return labels.get(filter_type, labels["all"])
+
+
+@app.route("/reports", methods=["GET"])
+@login_required
+def report_page():
+    """Display the report page with preview and filtering options."""
+    file_type = request.args.get("file_type", "csv").lower()
+    filter_type = request.args.get("filter_type", "all").lower()
+
+    if file_type not in {"csv", "xlsx", "pdf"}:
+        file_type = "csv"
+    if filter_type not in {"all", "collection", "status", "staff"}:
+        filter_type = "all"
+
+    report_data = _build_report_data()
+    report_data = _apply_report_filter(report_data, filter_type)
+
+    return render_template(
+        "report.html",
+        report_data=report_data,
+        selected_file_type=file_type,
+        selected_filter_type=filter_type,
+        selected_filter_label=_report_filter_label(filter_type),
+    )
+
+
 @app.route("/reports/download", methods=["GET"])
 @login_required
 def download_report():
-    """Download document report as CSV."""
-    docs = list_documents(conn)
+    """Download document report as CSV, XLSX, or PDF."""
+    file_type = request.args.get("file_type", "csv").lower()
+    filter_type = request.args.get("filter_type", "all").lower()
 
+    if file_type not in {"csv", "xlsx", "pdf"}:
+        file_type = "csv"
+    if filter_type not in {"all", "collection", "status", "staff"}:
+        filter_type = "all"
+
+    report_data = _build_report_data()
+    report_data = _apply_report_filter(report_data, filter_type)
+
+    # Generate file based on file_type
+    if file_type == "csv":
+        return _generate_csv_report(report_data)
+    elif file_type == "xlsx":
+        return _generate_xlsx_report(report_data)
+    elif file_type == "pdf":
+        return _generate_pdf_report(report_data)
+    else:
+        return _generate_csv_report(report_data)
+
+
+def _generate_csv_report(report_data):
+    """Generate CSV report."""
     output = StringIO()
     writer = csv.writer(output)
-    writer.writerow(["No", "FileName", "Title", "LatestStatus", "LastUpdatedAt"])
-
-    for i, d in enumerate(docs, start=1):
+    
+    # Write headers
+    writer.writerow([
+        "No.", "File Name", "#BIB", "CallNo.", "Collection", "Title",
+        "Published Year", "Job Status", "Staff", "Update Date&Time"
+    ])
+    
+    # Write data rows
+    for i, d in enumerate(report_data, start=1):
         writer.writerow([
             i,
-            d.get("file_name", ""),
-            d.get("title", ""),
-            d.get("current_status", ""),
-            d.get("last_completed_at") or d.get("created_at") or "",
+            d.get("file_name", "-"),
+            d.get("bib", "-"),
+            d.get("call_number", "-"),
+            d.get("collection", "-"),
+            d.get("title", "-"),
+            d.get("publish_date", "-"),
+            d.get("latest_status", "-"),
+            d.get("latest_user", "-"),
+            d.get("latest_date", "-"),
         ])
-
-    response = make_response(output.getvalue())
+    
+    response = make_response(output.getvalue().encode("utf-8-sig"))
     response.headers["Content-Type"] = "text/csv; charset=utf-8"
-    response.headers["Content-Disposition"] = "attachment; filename=document_report.csv"
+    response.headers["Content-Disposition"] = "attachment; filename=digitization_report.csv"
     return response
+
+
+def _generate_xlsx_report(report_data):
+    """Generate XLSX report."""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        # Fallback to CSV if openpyxl not available
+        return _generate_csv_report(report_data)
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Report"
+    
+    # Set column widths
+    columns_width = [6, 15, 12, 12, 15, 18, 12, 18, 12, 20]
+    for i, width in enumerate(columns_width, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+    
+    # Write headers
+    headers = [
+        "No.", "File Name", "#BIB", "CallNo.", "Collection", "Title",
+        "Published Year", "Job Status", "Staff", "Update Date&Time"
+    ]
+    
+    header_fill = PatternFill(start_color="F0F0F0", end_color="F0F0F0", fill_type="solid")
+    header_font = Font(bold=True)
+    
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    
+    # Write data rows
+    for row_num, d in enumerate(report_data, 2):
+        ws.cell(row=row_num, column=1).value = row_num - 1
+        ws.cell(row=row_num, column=2).value = d.get("file_name", "-")
+        ws.cell(row=row_num, column=3).value = d.get("bib", "-")
+        ws.cell(row=row_num, column=4).value = d.get("call_number", "-")
+        ws.cell(row=row_num, column=5).value = d.get("collection", "-")
+        ws.cell(row=row_num, column=6).value = d.get("title", "-")
+        ws.cell(row=row_num, column=7).value = d.get("publish_date", "-")
+        ws.cell(row=row_num, column=8).value = d.get("latest_status", "-")
+        ws.cell(row=row_num, column=9).value = d.get("latest_user", "-")
+        ws.cell(row=row_num, column=10).value = d.get("latest_date", "-")
+    
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = make_response(output.getvalue())
+    response.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    response.headers["Content-Disposition"] = "attachment; filename=digitization_report.xlsx"
+    return response
+
+
+def _generate_pdf_report(report_data):
+    """Generate PDF report."""
+    try:
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, PageTemplate, Frame, PageBreak
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.lib import colors
+    except ImportError:
+        # Fallback to CSV if reportlab not available
+        return _generate_csv_report(report_data)
+    
+    # Create PDF in landscape mode for better table fit
+    output = BytesIO()
+    doc = SimpleDocTemplate(output, pagesize=landscape(A4), rightMargin=10, leftMargin=10, topMargin=10, bottomMargin=10)
+    
+    # Prepare table data
+    table_data = [
+        ["No.", "File Name", "#BIB", "CallNo.", "Collection", "Title",
+         "Published Year", "Job Status", "Staff", "Update Date&Time"]
+    ]
+    
+    for i, d in enumerate(report_data, start=1):
+        table_data.append([
+            str(i),
+            d.get("file_name", "-"),
+            d.get("bib", "-"),
+            d.get("call_number", "-"),
+            d.get("collection", "-"),
+            d.get("title", "-"),
+            str(d.get("publish_date", "-")),
+            d.get("latest_status", "-"),
+            d.get("latest_user", "-"),
+            d.get("latest_date", "-"),
+        ])
+    
+    # Create table
+    table = Table(table_data, colWidths=[0.4*inch, 1*inch, 0.8*inch, 0.8*inch, 1*inch, 1.2*inch, 0.8*inch, 1*inch, 0.8*inch, 1.2*inch])
+    
+    # Apply table styling
+    style = TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F0F0F0")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, 0), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+        ("FONTSIZE", (0, 1), (-1, -1), 9),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#FAFAFA")]),
+    ])
+    table.setStyle(style)
+    
+    # Build PDF
+    doc.build([table])
+    output.seek(0)
+    
+    response = make_response(output.getvalue())
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = "attachment; filename=digitization_report.pdf"
+    return response
+
 
 
 @app.route("/documents/add", methods=["GET", "POST"])
