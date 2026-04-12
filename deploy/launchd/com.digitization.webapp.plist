@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.digitization.webapp</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/stang/Digitization Project/Digi_WebApp/DIgitizationProject/scripts/start_gunicorn.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/stang/Digitization Project/Digi_WebApp/DIgitizationProject</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>APP_HOST</key>
+    <string>0.0.0.0</string>
+    <key>APP_PORT</key>
+    <string>5001</string>
+    <key>APP_WORKERS</key>
+    <string>2</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/digitization-webapp.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/digitization-webapp.err.log</string>
+</dict>
+</plist>

@@ -403,7 +403,7 @@ def init_database(conn: sqlite3.Connection) -> None:
 def _validate_password(password: str) -> None:
     """Require password to be exactly 8 alphanumeric characters."""
     if not re.fullmatch(r"[A-Za-z0-9]{8}", password or ""):
-        raise ValueError("Password must be exactly 8 characters (A-Z, a-z, 0-9).")
+        raise ValueError("รหัสผ่านต้องเป็นตัวอักษรและตัวเลข จำนวน 8 ตัว (A-Z, a-z, 0-9)")
 
 
 def _seed_initial_data(conn: sqlite3.Connection) -> None:
@@ -572,6 +572,16 @@ def update_user_status(conn: sqlite3.Connection, email: str, account_status: str
 def delete_user_account(conn: sqlite3.Connection, email: str) -> None:
     """Delete a user account by email."""
     conn.execute("DELETE FROM users WHERE email = ?", (email.strip().lower(),))
+    conn.commit()
+
+
+def admin_reset_user_password(conn: sqlite3.Connection, email: str, new_password: str = "12345678") -> None:
+    """Reset a user's password to a default value (Admin only)."""
+    _validate_password(new_password)
+    conn.execute(
+        "UPDATE users SET password = ? WHERE email = ?",
+        (hash_password(new_password), email.strip().lower()),
+    )
     conn.commit()
 
 

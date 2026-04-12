@@ -240,6 +240,10 @@
       background: #58595b;
     }
 
+    .mini-btn.reset {
+      background: #f79646;
+    }
+
     .self-note {
       color: #8a8f95;
       font-size: 13px;
@@ -331,6 +335,8 @@
   <p class="notice">ลบบัญชีผู้ใช้เรียบร้อยแล้ว</p>
   {% elif message == 'status' %}
   <p class="notice">อัปเดตสถานะบัญชีเรียบร้อยแล้ว</p>
+  {% elif message == 'password_reset' %}
+  <p class="notice">รีเซ็ตรหัสผ่านเรียบร้อยแล้ว (รหัสผ่านเริ่มต้น: 12345678)</p>
   {% endif %}
 
   {% if error_message %}
@@ -363,6 +369,7 @@
         <div class="form-stack">
           <label for="password">รหัสผ่าน</label>
           <input id="password" name="password" type="password" required>
+          <p class="field-hint">รหัสผ่านต้องเป็นตัวอักษรและตัวเลข จำนวน 8 ตัว (A-Z, a-z, 0-9)</p>
         </div>
         {% endif %}
 
@@ -452,6 +459,12 @@
               <button class="mini-btn delete" type="submit">ลบ</button>
             </form>
 
+            <form class="mini-form js-reset-password-form" method="post" action="{{ url_for('user_management_page') }}" data-account-name="{{ u.user_name }}">
+              <input type="hidden" name="action" value="reset_password">
+              <input type="hidden" name="email" value="{{ u.email }}">
+              <button class="mini-btn reset" type="submit">รีเซ็ตรหัสผ่าน</button>
+            </form>
+
             <form class="mini-form js-suspend-form" method="post" action="{{ url_for('user_management_page') }}" data-account-name="{{ u.user_name }}">
               <input type="hidden" name="action" value="toggle_status">
               <input type="hidden" name="email" value="{{ u.email }}">
@@ -471,6 +484,16 @@
   </table>
 </section>
 
+<div class="confirm-modal" id="resetPasswordConfirmModal" aria-hidden="true">
+  <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="resetPasswordConfirmMessage">
+    <p class="confirm-message" id="resetPasswordConfirmMessage">คุณต้องการยืนยันการรีเซ็ตรหัสผ่านของ <strong id="resetPasswordAccountName"></strong> หรือไม่ (รหัสผ่านเริ่มต้น: 12345678)</p>
+    <div class="confirm-actions">
+      <button class="confirm-btn submit" type="button" id="confirmResetButton">ยืนยัน</button>
+      <button class="confirm-btn cancel" type="button" id="cancelResetButton">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
 <div class="confirm-modal" id="suspendConfirmModal" aria-hidden="true">
   <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="suspendConfirmMessage">
     <p class="confirm-message" id="suspendConfirmMessage">คุณต้องการยืนยันการระงับบัญชีผู้ใช้งาน <strong id="suspendAccountName"></strong> หรือไม่</p>
@@ -483,6 +506,45 @@
 
 <script>
   (function () {
+    // Reset password modal
+    const resetModal = document.getElementById("resetPasswordConfirmModal");
+    const resetAccountNameNode = document.getElementById("resetPasswordAccountName");
+    const confirmResetButton = document.getElementById("confirmResetButton");
+    const cancelResetButton = document.getElementById("cancelResetButton");
+    const resetPasswordForms = document.querySelectorAll(".js-reset-password-form");
+    let pendingResetForm = null;
+
+    function closeResetModal() {
+      resetModal.classList.remove("is-open");
+      resetModal.setAttribute("aria-hidden", "true");
+      pendingResetForm = null;
+    }
+
+    resetPasswordForms.forEach(function (form) {
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        pendingResetForm = form;
+        resetAccountNameNode.textContent = form.dataset.accountName || "";
+        resetModal.classList.add("is-open");
+        resetModal.setAttribute("aria-hidden", "false");
+      });
+    });
+
+    confirmResetButton.addEventListener("click", function () {
+      if (pendingResetForm) {
+        pendingResetForm.submit();
+      }
+    });
+
+    cancelResetButton.addEventListener("click", closeResetModal);
+
+    resetModal.addEventListener("click", function (event) {
+      if (event.target === resetModal) {
+        closeResetModal();
+      }
+    });
+
+    // Suspend status modal
     const modal = document.getElementById("suspendConfirmModal");
     const accountNameNode = document.getElementById("suspendAccountName");
     const confirmButton = document.getElementById("confirmSuspendButton");

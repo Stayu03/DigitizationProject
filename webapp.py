@@ -16,6 +16,7 @@ from database import (
     update_user_account,
     update_user_status,
     delete_user_account,
+    admin_reset_user_password,
     add_document,
     list_documents,
     get_document,
@@ -809,6 +810,16 @@ def user_management_page():
             if email and email != (session.get("user_email") or "").strip().lower():
                 delete_user_account(conn, email)
             return redirect(url_for("user_management_page", message="deleted"))
+
+        if action == "reset_password":
+            email = request.form.get("email", "").strip().lower()
+            if email and email != (session.get("user_email") or "").strip().lower():
+                try:
+                    admin_reset_user_password(conn, email)
+                except ValueError:
+                    error_message = "รหัสผ่านเริ่มต้นไม่ถูกต้อง"
+                else:
+                    return redirect(url_for("user_management_page", message="password_reset"))
 
     users = list_users(conn)
     query_text = request.args.get("q", "").strip()

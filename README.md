@@ -57,3 +57,55 @@
 # .streamlit/
 # config.toml            # theme และ config ของ Streamlit
 
+## การรันระบบ (แนะนำ)
+
+### 1) โหมดพัฒนา (Development)
+
+```bash
+cd "/Users/stang/Digitization Project/Digi_WebApp/DIgitizationProject"
+.venv/bin/python run.py
+```
+
+ตัวเลือกผ่าน environment variables:
+- `APP_HOST` ค่าเริ่มต้น `127.0.0.1`
+- `APP_PORT` ค่าเริ่มต้น `5001`
+- `APP_DEBUG` ค่าเริ่มต้น `0`
+
+### 2) โหมดใช้งานจริง (Production ด้วย Gunicorn)
+
+```bash
+cd "/Users/stang/Digitization Project/Digi_WebApp/DIgitizationProject"
+chmod +x scripts/start_gunicorn.sh
+APP_HOST=0.0.0.0 APP_PORT=5001 APP_WORKERS=2 ./scripts/start_gunicorn.sh
+```
+
+หมายเหตุ:
+- ถ้าต้องการให้เครื่องอื่นในวง LAN เข้าได้ ให้ใช้ `APP_HOST=0.0.0.0`
+- ถ้าต้องการให้เปิดได้เฉพาะเครื่องตัวเอง ให้ใช้ `APP_HOST=127.0.0.1`
+
+### 3) ตั้งให้รันอัตโนมัติเมื่อเปิดเครื่อง macOS (launchd)
+
+คัดลอกไฟล์ตัวอย่าง:
+
+```bash
+cp deploy/launchd/com.digitization.webapp.plist ~/Library/LaunchAgents/
+launchctl unload ~/Library/LaunchAgents/com.digitization.webapp.plist 2>/dev/null || true
+launchctl load ~/Library/LaunchAgents/com.digitization.webapp.plist
+launchctl start com.digitization.webapp
+```
+
+คำสั่งตรวจสอบ:
+
+```bash
+launchctl list | grep com.digitization.webapp
+tail -n 50 /tmp/digitization-webapp.err.log
+tail -n 50 /tmp/digitization-webapp.out.log
+```
+
+คำสั่งหยุด:
+
+```bash
+launchctl stop com.digitization.webapp
+launchctl unload ~/Library/LaunchAgents/com.digitization.webapp.plist
+```
+
