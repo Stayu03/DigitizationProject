@@ -23,6 +23,7 @@
         {{ crumbs[-1]|trim }}
       </div>
     {% else %}
+      <div class="header-breadcrumb"></div>
       <div class="header-title">
         <span class="crumb-segment current">{{ header_title }}</span>
       </div>
@@ -38,37 +39,3 @@
     </a>
   </div>
 </header>
-
-<script>
-  (function () {
-    // Get current page title from DOM
-    var currentTitle = document.querySelector('.header-title')?.innerText?.trim() || '';
-    
-    // Store breadcrumb info in sessionStorage
-    var breadcrumbKey = 'page_breadcrumb';
-    var prevData = sessionStorage.getItem(breadcrumbKey);
-    
-    // Update breadcrumb if we have a previous page and current title is different
-    if (currentTitle && (!prevData || prevData !== currentTitle)) {
-      // Store navigation in format: previousPage > currentPage
-      if (prevData && prevData !== currentTitle) {
-        var breadcrumbSection = document.querySelector('.header-breadcrumb');
-        if (breadcrumbSection && !breadcrumbSection.querySelector('.crumb-separator')) {
-          // Create breadcrumb if it doesn't exist
-          var prevCrumb = document.createElement('span');
-          prevCrumb.className = 'crumb-segment prev';
-          prevCrumb.textContent = prevData;
-          
-          var separator = document.createElement('span');
-          separator.className = 'crumb-separator';
-          separator.textContent = '>';
-          
-          breadcrumbSection.appendChild(prevCrumb);
-          breadcrumbSection.appendChild(separator);
-        }
-      }
-      // Update stored page
-      sessionStorage.setItem(breadcrumbKey, currentTitle);
-    }
-  })();
-</script>

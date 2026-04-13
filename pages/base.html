@@ -271,6 +271,16 @@
       width: 100%;
     }
 
+    /* Global rule: non-editable fields use the soft pink background. */
+    input[readonly],
+    input:disabled,
+    select[readonly],
+    select:disabled,
+    textarea[readonly],
+    textarea:disabled {
+      background: #f8e1ea !important;
+    }
+
     table {
       width: 100%;
       border-collapse: separate;

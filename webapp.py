@@ -183,6 +183,8 @@ def login():
             session["user_email"] = user["email"]
             session["user_name"] = user["user_name"]
             session["user_role"] = user["role"]
+            # Keep current login password only for read-only reveal on settings page.
+            session["current_password_plain"] = password
             return redirect(url_for("dashboard"))
         else:
             return render_template("login.html", error="อีเมลหรือรหัสผ่านไม่ถูกต้อง")
@@ -775,14 +777,11 @@ def process_tracking_page(file_name):
 def settings_page():
     """Display settings page for all users."""
     current_email = session.get("user_email", "")
+    current_role = (session.get("user_role") or "").strip()
+    is_admin_user = current_role == "Admin"
 
     if request.method == "POST":
-        new_password = request.form.get("new_password", "")
-        try:
-            update_user_password(conn, current_email, new_password)
-        except ValueError:
-            return redirect(url_for("settings_page", error="invalid_password"))
-        return redirect(url_for("settings_page", message="password_saved"))
+        return redirect(url_for("settings_page", error="password_readonly"))
 
     account = get_user_by_email(conn, current_email) if current_email else None
     if not account:
@@ -800,6 +799,8 @@ def settings_page():
     return render_template(
         "setting.html",
         account=account,
+        is_admin_user=is_admin_user,
+        password_display=session.get("current_password_plain", "********"),
         created_at_display=created_at,
         message=request.args.get("message", "").strip().lower(),
         error=request.args.get("error", "").strip().lower(),

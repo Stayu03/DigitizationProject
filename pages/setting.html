@@ -36,7 +36,7 @@
       height: 38px;
       border: 0;
       border-radius: 10px;
-      background: #e9e9e9;
+      background: #f8e1ea;
       padding: 0 12px;
       font-size: 16px;
       font-family: "Kanit", sans-serif;
@@ -120,10 +120,8 @@
     }
   </style>
 
-  {% if message == 'password_saved' %}
-  <div class="page-alert-placeholder" data-page-alert-message="บันทึกรหัสผ่านใหม่เรียบร้อยแล้ว"></div>
-  {% elif error == 'invalid_password' %}
-  <div class="page-alert-placeholder" data-page-alert-message="รหัสผ่านต้องเป็นตัวอักษรและตัวเลข จำนวน 8 ตัว (A-Z, a-z, 0-9)"></div>
+  {% if error == 'password_readonly' %}
+  <div class="page-alert-placeholder" data-page-alert-message="หน้านี้ใช้สำหรับดูรหัสผ่านเท่านั้น ไม่สามารถแก้ไขได้ กรุณาเปลี่ยนรหัสผ่านที่หน้าจัดการบัญชีผู้ใช้งาน"></div>
   {% endif %}
 
   <h2 class="setting-topic">ข้อมูลบัญชีผู้ใช้งาน</h2>
@@ -135,30 +133,24 @@
     <p class="field-label">อีเมล</p>
     <div class="field-box">{{ account.email or '-' }}</div>
 
-    <form method="post" action="{{ url_for('settings_page') }}">
-      <p class="field-label">รหัสผ่านใหม่</p>
-      <div class="password-wrap">
-        <input id="passwordField" class="password-input" type="password" name="new_password" placeholder="กรอกรหัสผ่านใหม่" required>
-        <button id="togglePasswordBtn" type="button" class="eye-btn" aria-label="แสดงหรือซ่อนรหัสผ่าน">
-          <svg class="eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5.23 0 9.27 3.11 11 7-1.73 3.89-5.77 7-11 7S2.73 15.89 1 12c1.73-3.89 5.77-7 11-7zm0 2C8.36 7 5.41 9.06 4 12c1.41 2.94 4.36 5 8 5s6.59-2.06 8-5c-1.41-2.94-4.36-5-8-5zm0 2.5A2.5 2.5 0 1 1 9.5 12 2.5 2.5 0 0 1 12 9.5z"/></svg>
-        </button>
-      </div>
-      <p class="password-help">รหัสผ่านต้องเป็นตัวอักษรและตัวเลข จำนวน 8 ตัว (A-Z, a-z, 0-9)</p>
+    <p class="field-label">รหัสผ่าน</p>
+    <div class="password-wrap">
+      <input id="passwordField" class="password-input" type="password" value="{{ password_display }}" readonly>
+      <button id="togglePasswordBtn" type="button" class="eye-btn" aria-label="แสดงหรือซ่อนรหัสผ่าน">
+        <svg class="eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5.23 0 9.27 3.11 11 7-1.73 3.89-5.77 7-11 7S2.73 15.89 1 12c1.73-3.89 5.77-7 11-7zm0 2C8.36 7 5.41 9.06 4 12c1.41 2.94 4.36 5 8 5s6.59-2.06 8-5c-1.41-2.94-4.36-5-8-5zm0 2.5A2.5 2.5 0 1 1 9.5 12 2.5 2.5 0 0 1 12 9.5z"/></svg>
+      </button>
+    </div>
+    <p class="password-help">หน้านี้แสดงรหัสผ่านเท่านั้น หากต้องการเปลี่ยนรหัสผ่านให้ดำเนินการในหน้าจัดการบัญชีผู้ใช้งาน</p>
 
-      <p class="field-label">วันที่ลงทะเบียนเข้าใช้ครั้งแรก</p>
-      <div class="field-box">{{ created_at_display|display_date if created_at_display and created_at_display != '-' else '-' }}</div>
+    <p class="field-label">วันที่ลงทะเบียนเข้าใช้ครั้งแรก</p>
+    <div class="field-box">{{ created_at_display|display_date if created_at_display and created_at_display != '-' else '-' }}</div>
 
-      <p class="field-label">หมายเหตุ</p>
-      {% if account.note %}
-      <div class="field-box note-box">{{ account.note }}</div>
-      {% else %}
-      <div class="field-box note-box note-empty">ไม่มีหมายเหตุ</div>
-      {% endif %}
-
-      <div style="margin-top: 14px;">
-        <button type="submit" class="save-password-btn">บันทึกรหัสผ่าน</button>
-      </div>
-    </form>
+    <p class="field-label">หมายเหตุ</p>
+    {% if account.note %}
+    <div class="field-box note-box">{{ account.note }}</div>
+    {% else %}
+    <div class="field-box note-box note-empty">ไม่มีหมายเหตุ</div>
+    {% endif %}
   </div>
 
   <script>
