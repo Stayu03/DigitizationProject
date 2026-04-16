@@ -893,6 +893,7 @@ def list_document_updates(conn: sqlite3.Connection, file_name: str) -> list[dict
                 p.completed_at,
                 COALESCE(u.user_name, p.updated_by, d.user_name) AS user_name,
                 COALESCE(p.note, '') AS note,
+                COALESCE(p.updated_by_email, '') AS user_email,
                 d.created_at
             FROM process_tracking p
             INNER JOIN documents d
@@ -913,6 +914,7 @@ def list_document_updates(conn: sqlite3.Connection, file_name: str) -> list[dict
                 p.completed_at,
                 COALESCE(u.user_name, p.updated_by, d.user_name) AS user_name,
                 '' AS note,
+                COALESCE(p.updated_by_email, '') AS user_email,
                 d.created_at
             FROM process_tracking p
             INNER JOIN documents d
@@ -933,6 +935,7 @@ def list_document_updates(conn: sqlite3.Connection, file_name: str) -> list[dict
                 p.completed_at,
                 COALESCE(p.updated_by, d.user_name) AS user_name,
                 COALESCE(p.note, '') AS note,
+                '' AS user_email,
                 d.created_at
             FROM process_tracking p
             INNER JOIN documents d
@@ -951,6 +954,7 @@ def list_document_updates(conn: sqlite3.Connection, file_name: str) -> list[dict
                 p.completed_at,
                 COALESCE(p.updated_by, d.user_name) AS user_name,
                 '' AS note,
+                '' AS user_email,
                 d.created_at
             FROM process_tracking p
             INNER JOIN documents d
@@ -969,6 +973,7 @@ def list_document_updates(conn: sqlite3.Connection, file_name: str) -> list[dict
                 p.completed_at,
                 d.user_name,
                 COALESCE(p.note, '') AS note,
+                '' AS user_email,
                 d.created_at
             FROM process_tracking p
             INNER JOIN documents d
@@ -987,6 +992,7 @@ def list_document_updates(conn: sqlite3.Connection, file_name: str) -> list[dict
                 p.completed_at,
                 d.user_name,
                 '' AS note,
+                '' AS user_email,
                 d.created_at
             FROM process_tracking p
             INNER JOIN documents d
@@ -997,6 +1003,18 @@ def list_document_updates(conn: sqlite3.Connection, file_name: str) -> list[dict
             (file_name,),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def update_document_status(conn: sqlite3.Connection, file_name: str, status: str, completed_at: str, note: str, updated_by_email: str) -> None:
+    """Update document status in process_tracking table."""
+    conn.execute(
+        """
+        INSERT INTO process_tracking (file_name, status, completed_at, note, updated_by_email)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (file_name, status, completed_at, note, updated_by_email),
+    )
+    conn.commit()
 
 
 def list_status_counts(conn: sqlite3.Connection) -> list[dict[str, Any]]:

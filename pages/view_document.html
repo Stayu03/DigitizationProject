@@ -33,6 +33,10 @@
       flex: 0 0 auto;
     }
 
+    .center-datetime {
+      text-align: center;
+    }
+
     .doc-title-box {
       background: #f8e1ea;
       color: #de5c8e;
@@ -109,6 +113,10 @@
       text-align: center;
     }
 
+    .center-datetime {
+      text-align: center;
+    }
+
     .date-line {
       font-size: 16px;
       color: #000;
@@ -167,6 +175,7 @@
       <svg class="table-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5z"/></svg>
       <select class="table-select compact-select" name="status" onchange="this.form.submit()">
         <option value="" {% if not status_filter %}selected{% endif %}>สถานะทั้งหมด</option>
+        <option value="my_job" {% if status_filter == 'my_job' %}selected{% endif %}>งานของฉัน</option>
         {% for status in [
           'คัดเลือกเอกสาร',
           'สแกนเอกสาร',
@@ -235,14 +244,14 @@
         <td class="col-no">{{ loop.index }}</td>
         <td>{{ item.status or '-' }}</td>
         <td>{{ item.user_name or '-' }}</td>
-        <td>
+        <td class="center-datetime">
           {% set dt = item.completed_at or item.created_at %}
           {% if dt %}
             <div class="date-line">{{ dt|display_date }}</div>
             <div class="time-line">{{ dt|display_time }}</div>
           {% else %}
             <div class="date-line">-</div>
-            <div class="time-line">-</div>
+            <div class="time-line"></div>
           {% endif %}
         </td>
       </tr>

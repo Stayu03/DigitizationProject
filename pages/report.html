@@ -294,7 +294,7 @@
 								<td>{{ doc.publish_date or '-' }}</td>
 								<td>{{ doc.latest_status or '-' }}</td>
 								<td>{{ doc.latest_user or '-' }}</td>
-								<td>{% if doc.latest_date and doc.latest_date != '-' %}{{ doc.latest_date|display_date }}<br><span class="dt-time">{{ doc.latest_date|display_time }}</span>{% else %}-{% endif %}</td>
+								<td>{% if doc.latest_date and doc.latest_date != '-' %}{{ doc.latest_date|report_datetime }}{% else %}-{% endif %}</td>
 							</tr>
 							{% endfor %}
 						{% else %}

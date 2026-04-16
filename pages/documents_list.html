@@ -79,6 +79,10 @@
       text-underline-offset: 2px;
     }
 
+    .center-datetime {
+      text-align: center;
+    }
+
     .date-line {
       font-size: 16px;
       color: #000;
@@ -142,7 +146,7 @@
       <select class="table-select compact-select" name="sort" onchange="this.form.submit()">
         <option value="new" {% if sort_order == 'new' %}selected{% endif %}>เรียงลำดับจากใหม่-เก่า</option>
         <option value="old" {% if sort_order == 'old' %}selected{% endif %}>เรียงลำดับจากเก่า-ใหม่</option>
-        <option value="title" {% if sort_order == 'title' %}selected{% endif %}>เรียงลำดับจากชื่อเรื่อง (ก-ฮ/A-Z)</option>
+        <option value="title" {% if sort_order == 'title' %}selected{% endif %}>เรียงลำดับจากชื่อเรื่อง (A-Z/ก-ฮ)</option>
       </select>
     </div>
   </form>
@@ -194,14 +198,14 @@
           </a>
         </td>
         <td><span class="status-text">{{ doc.current_status or 'คัดเลือกเอกสาร' }}</span></td>
-        <td>
+        <td class="center-datetime">
           {% set dt = doc.last_completed_at or doc.created_at %}
           {% if dt %}
             <div class="date-line">{{ dt|display_date }}</div>
             <div class="time-line">{{ dt|display_time }}</div>
           {% else %}
             <div class="date-line">-</div>
-            <div class="time-line">-</div>
+            <div class="time-line"></div>
           {% endif %}
         </td>
       </tr>

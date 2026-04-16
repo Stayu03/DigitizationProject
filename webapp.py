@@ -66,9 +66,19 @@ def _parse_datetime(value):
     except ValueError:
         pass
 
-    for pattern in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+    prepared_text = text
+    if prepared_text.endswith("น."):
+        prepared_text = prepared_text[:-2].strip()
+
+    for pattern in (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d",
+        "%d/%m/%Y %H.%M",
+        "%d/%m/%Y %H:%M",
+        "%d/%m/%Y",
+    ):
         try:
-            return datetime.strptime(text, pattern)
+            return datetime.strptime(prepared_text, pattern)
         except ValueError:
             continue
     return None
@@ -90,8 +100,17 @@ def format_display_time(value):
     return "-"
 
 
+def format_report_datetime(value):
+    """Render datetime as YYYY-MM-DD HH:MM for reports."""
+    parsed = _parse_datetime(value)
+    if parsed:
+        return parsed.strftime("%Y-%m-%d %H:%M")
+    return "-"
+
+
 app.jinja_env.filters["display_date"] = format_display_date
 app.jinja_env.filters["display_time"] = format_display_time
+app.jinja_env.filters["report_datetime"] = format_report_datetime
 
 
 def _sort_documents(docs, sort_order):
@@ -639,7 +658,15 @@ def view_document(file_name):
             if q in (u.get("status") or "").lower() or q in (u.get("user_name") or "").lower()
         ]
 
-    if status_filter:
+    if status_filter == "my_job":
+        current_user_email = session.get("user_email", "").strip().lower()
+        filtered_updates = []
+        for u in updates:
+            user_email = (u.get("user_email") or "").strip().lower()
+            if current_user_email and user_email == current_user_email:
+                filtered_updates.append(u)
+        updates = filtered_updates
+    elif status_filter:
         updates = [u for u in updates if (u.get("status") or "") == status_filter]
 
     updates = sorted(

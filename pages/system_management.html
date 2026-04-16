@@ -110,6 +110,27 @@
       filter: brightness(0.96);
     }
 
+    .add-option-btn {
+      border: 0;
+      border-radius: 10px;
+      background: #32CD32;
+      color: #fff;
+      min-height: 44px;
+      padding: 0 16px;
+      font-family: "Kanit", sans-serif;
+      font-size: 16px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 3px 10px rgba(50, 205, 50, 0.26);
+      margin-right: 10px;
+    }
+
+    .add-option-btn:hover {
+      filter: brightness(0.96);
+    }
+
     .refresh-icon {
       width: 18px;
       height: 18px;
@@ -128,15 +149,17 @@
 
       <p class="field-label">คอลเลกชัน (Collection)</p>
       {% if is_edit_mode %}
-      <form method="post" action="{{ url_for('system_management_page') }}" class="edit-list">
+      <form method="post" action="{{ url_for('system_management_page') }}" class="edit-list" id="options-form">
         {% for option in collection_options %}
         <input class="edit-input" type="text" name="collection_options" value="{{ option }}">
         {% endfor %}
-        {% for _ in range(4) %}
-        <input class="edit-input" type="text" name="collection_options" value="" placeholder="เพิ่มตัวเลือกคอลเลกชัน">
-        {% endfor %}
-        <p class="edit-hint">สามารถแก้ไข ลบ หรือเพิ่มตัวเลือกได้ แล้วกดบันทึกข้อมูล</p>
+        <input class="edit-input" type="text" name="collection_options" value="" placeholder="เพิ่มตัวเลือกคอลเลกชัน" id="new-option-input">
+        <p class="edit-hint">สามารถแก้ไข ลบ หรือเพิ่มตัวเลือกได้ แล้วกดบันทึกข้อมูล (สูงสุด 20 ตัวเลือก)</p>
         <div class="action-panel" style="justify-content: flex-start; min-width: 0;">
+          <button type="button" class="add-option-btn" id="add-option-btn">
+            <svg class="refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <span>เพิ่มตัวเลือกใหม่</span>
+          </button>
           <button type="submit" class="update-btn">
             <svg class="refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM7 5h8v4H7V5zm12 14H5v-8h14v8z"/></svg>
             <span>บันทึกข้อมูล</span>
@@ -168,4 +191,40 @@
     </div>
   </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const addOptionBtn = document.getElementById('add-option-btn');
+  const form = document.getElementById('options-form');
+  const hint = form.querySelector('.edit-hint');
+  
+  function updateHint() {
+    const inputs = form.querySelectorAll('input[name="collection_options"]');
+    hint.textContent = `สามารถแก้ไข ลบ หรือเพิ่มตัวเลือกได้ แล้วกดบันทึกข้อมูล (สูงสุด 20 ตัวเลือก) - ปัจจุบันมี ${inputs.length} ตัวเลือก`;
+  }
+  
+  updateHint(); // Initial update
+  
+  if (addOptionBtn && form) {
+    addOptionBtn.addEventListener('click', function() {
+      const inputs = form.querySelectorAll('input[name="collection_options"]');
+      if (inputs.length < 20) {
+        const newInput = document.createElement('input');
+        newInput.className = 'edit-input';
+        newInput.type = 'text';
+        newInput.name = 'collection_options';
+        newInput.placeholder = 'เพิ่มตัวเลือกคอลเลกชัน';
+        
+        // Insert before the hint paragraph
+        form.insertBefore(newInput, hint);
+        
+        updateHint();
+      } else {
+        alert('ไม่สามารถเพิ่มตัวเลือกได้อีกแล้ว สูงสุด 20 ตัวเลือก');
+      }
+    });
+  }
+});
+</script>
+
 {% endblock %}
