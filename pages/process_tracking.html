@@ -455,6 +455,10 @@
 			background: #24a0ed;
 		}
 
+		.delete-btn {
+			background: #d64545;
+		}
+
 		.btn-icon {
 			width: 16px;
 			height: 16px;
@@ -512,10 +516,87 @@
 		.status-detail-value {
 			color: #2f3133;
 		}
+
+		.section-action-row {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 8px;
+		}
+
+		.delete-modal {
+			position: fixed;
+			inset: 0;
+			display: none;
+			align-items: center;
+			justify-content: center;
+			background: rgba(47, 49, 51, 0.38);
+			z-index: 1001;
+			padding: 20px;
+		}
+
+		.delete-modal.is-open {
+			display: flex;
+		}
+
+		.delete-dialog {
+			width: min(460px, 100%);
+			border-radius: 16px;
+			background: #fff;
+			padding: 22px;
+			box-shadow: 0 18px 48px rgba(47, 49, 51, 0.2);
+		}
+
+		.delete-title {
+			margin: 0 0 8px;
+			font-size: 22px;
+			font-weight: 500;
+			color: #1f2022;
+		}
+
+		.delete-help {
+			margin: 0 0 12px;
+			color: #4f545a;
+			font-size: 15px;
+		}
+
+		.delete-password {
+			width: 100%;
+			min-height: 42px;
+			border: 1px solid #d7dbe1;
+			border-radius: 10px;
+			padding: 10px 12px;
+			font-size: 16px;
+			font-family: "Kanit", sans-serif;
+			margin-bottom: 14px;
+		}
+
+		.delete-actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: 10px;
+		}
+
+		.cancel-btn {
+			border: 0;
+			border-radius: 10px;
+			height: 42px;
+			padding: 0 14px;
+			background: #58595b;
+			color: #fff;
+			font-family: "Kanit", sans-serif;
+			font-size: 15px;
+			cursor: pointer;
+		}
 	</style>
 
 	{% if message == 'saved' %}
 	<div class="page-alert-placeholder" data-page-alert-message="บันทึกข้อมูลเรียบร้อยแล้ว"></div>
+	{% elif message == 'deleted_document' %}
+	<div class="page-alert-placeholder" data-page-alert-message="ลบเอกสารเรียบร้อยแล้ว"></div>
+	{% elif error == 'delete_auth_failed' %}
+	<div class="page-alert-placeholder" data-page-alert-message="รหัสผ่านไม่ถูกต้อง ไม่สามารถลบเอกสารได้"></div>
 	{% elif error == 'save_failed' %}
 	<div class="page-alert-placeholder" data-page-alert-message="ไม่สามารถบันทึกข้อมูลได้"></div>
 	{% elif message == 'created' %}
@@ -567,7 +648,15 @@
 
 	<div class="bottom-layout">
 		<div>
-			<h2 class="part-title">ข้อมูลเอกสาร</h2>
+			<div class="section-action-row">
+				<h2 class="part-title">ข้อมูลเอกสาร</h2>
+				{% if can_edit_detail %}
+				<button class="action-btn delete-btn" type="button" id="openDeleteModalBtn">
+					<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 14H7L6 7zm3-3h6l1 2h4v2H4V6h4l1-2z"/></svg>
+					<span>ลบเอกสาร</span>
+				</button>
+				{% endif %}
+			</div>
 
 			{% if can_edit_detail %}
 			<form method="post" action="{{ url_for('process_tracking_page', file_name=document.file_name, source='update') }}" class="info-form" id="docInfoForm">
@@ -591,10 +680,12 @@
 					{% endif %}
 				</select>
 
+				<div class="info-label">ชื่อเรื่อง (Title)</div>
+				<input class="info-input" name="title" value="{{ document.title or '' }}" readonly>
+
 				<div class="info-label">ปีที่พิมพ์ (Published Date)</div>
 				<input class="info-input" name="publish_date" type="number" value="{{ document.publish_date or '' }}" readonly>
 
-				<input type="hidden" name="title" value="{{ document.title or '' }}">
 				<input type="hidden" name="user_name" value="{{ document.user_name or '' }}">
 				<input type="hidden" name="file_path" value="{{ document.file_path or '' }}">
 
@@ -616,6 +707,9 @@
 
 				<div class="info-label">คอลเลกชัน (Collection)</div>
 				<div class="info-value">{{ document.collection or '-' }}</div>
+
+				<div class="info-label">ชื่อเรื่อง (Title)</div>
+				<div class="info-value">{{ document.title or '-' }}</div>
 
 				<div class="info-label">ปีที่พิมพ์ (Published Date)</div>
 				<div class="info-value">{{ document.publish_date or '-' }}</div>
@@ -677,8 +771,59 @@
 		</div>
 	</div>
 
+	{% if can_edit_detail %}
+	<div class="delete-modal" id="deleteDocumentModal" aria-hidden="true">
+		<div class="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteDocumentTitle">
+			<h3 class="delete-title" id="deleteDocumentTitle">ยืนยันการลบเอกสาร</h3>
+			<p class="delete-help">การลบจะลบข้อมูลเอกสารและประวัติการอัปเดตทั้งหมด กรุณาใส่รหัสผ่านผู้ใช้เพื่อยืนยัน</p>
+			<form method="post" action="{{ url_for('delete_document_page', file_name=document.file_name) }}">
+				<input type="hidden" name="next_page" value="process_tracking">
+				<input class="delete-password" type="password" name="password" placeholder="รหัสผ่านผู้ใช้" required>
+				<div class="delete-actions">
+					<button class="cancel-btn" type="button" id="closeDeleteModalBtn">ยกเลิก</button>
+					<button class="action-btn delete-btn" type="submit">
+						<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 14H7L6 7zm3-3h6l1 2h4v2H4V6h4l1-2z"/></svg>
+						<span>ยืนยันลบเอกสาร</span>
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+	{% endif %}
+
 	<script>
 		(function () {
+			var deleteModal = document.getElementById("deleteDocumentModal");
+			var openDeleteBtn = document.getElementById("openDeleteModalBtn");
+			var closeDeleteBtn = document.getElementById("closeDeleteModalBtn");
+
+			function closeDeleteModal() {
+				if (!deleteModal) {
+					return;
+				}
+				deleteModal.classList.remove("is-open");
+				deleteModal.setAttribute("aria-hidden", "true");
+			}
+
+			if (openDeleteBtn && deleteModal) {
+				openDeleteBtn.addEventListener("click", function () {
+					deleteModal.classList.add("is-open");
+					deleteModal.setAttribute("aria-hidden", "false");
+				});
+			}
+
+			if (closeDeleteBtn) {
+				closeDeleteBtn.addEventListener("click", closeDeleteModal);
+			}
+
+			if (deleteModal) {
+				deleteModal.addEventListener("click", function (event) {
+					if (event.target === deleteModal) {
+						closeDeleteModal();
+					}
+				});
+			}
+
 			var modal = document.getElementById("statusDetailModal");
 			var closeButton = document.getElementById("closeStatusDetailModal");
 			var statusBoxes = document.querySelectorAll(".js-status-box");

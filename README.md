@@ -82,6 +82,8 @@ APP_HOST=0.0.0.0 APP_PORT=5001 APP_WORKERS=2 ./scripts/start_gunicorn.sh
 หมายเหตุ:
 - ถ้าต้องการให้เครื่องอื่นในวง LAN เข้าได้ ให้ใช้ `APP_HOST=0.0.0.0`
 - ถ้าต้องการให้เปิดได้เฉพาะเครื่องตัวเอง ให้ใช้ `APP_HOST=127.0.0.1`
+- โค้ดรองรับ `PORT` ของ Render อัตโนมัติแล้ว
+- ถ้าไม่ตั้ง `DB_PATH` จะใช้ค่าเริ่มต้น `data/digitization.db`
 
 ### 3) ตั้งให้รันอัตโนมัติเมื่อเปิดเครื่อง macOS (launchd)
 
@@ -108,4 +110,51 @@ tail -n 50 /tmp/digitization-webapp.out.log
 launchctl stop com.digitization.webapp
 launchctl unload ~/Library/LaunchAgents/com.digitization.webapp.plist
 ```
+
+## Deploy บน Render.com
+
+### 1) สร้าง Web Service ใหม่
+
+- เลือก Runtime: `Python`
+- Root Directory: โฟลเดอร์โปรเจกต์นี้
+- Build Command:
+
+```bash
+pip install -r requirements.txt
+```
+
+- Start Command:
+
+```bash
+gunicorn webapp:app --bind 0.0.0.0:$PORT --workers ${APP_WORKERS:-2} --timeout ${APP_TIMEOUT:-120}
+```
+
+- Health Check Path: `/health`
+
+ทางเลือกแบบเร็ว (Blueprint):
+- โปรเจกต์นี้มีไฟล์ `render.yaml` แล้ว
+- ใน Render เลือก New + > Blueprint แล้วชี้มาที่ repository นี้ได้เลย
+
+### 2) ตั้งค่า Environment Variables
+
+- `SECRET_KEY`: ค่าสุ่มยาว (ต้องตั้งใน production)
+- `DB_PATH`: แนะนำให้ชี้ไป Render Disk เช่น `/var/data/digitization.db`
+- `APP_WORKERS`: จำนวน worker ของ Gunicorn (ค่าแนะนำ `2`)
+- `APP_TIMEOUT`: timeout ของ Gunicorn เป็นวินาที (ค่าแนะนำ `120`)
+
+### 3) ใช้ Persistent Disk (แนะนำ)
+
+- ในหน้า Render Service ให้เพิ่ม Disk และ mount ที่ `/var/data`
+- ตั้ง `DB_PATH=/var/data/digitization.db`
+- Redeploy 1 รอบหลังตั้งค่า
+
+### 4) ตรวจ Health Check
+
+หลังตั้งค่า env และ deploy แล้ว ให้เปิด:
+
+```text
+/health
+```
+
+ถ้าสำเร็จจะได้สถานะ `ok` และ HTTP `200`
 

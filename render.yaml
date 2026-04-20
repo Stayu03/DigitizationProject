@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: digitization-webapp
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn webapp:app --bind 0.0.0.0:$PORT --workers ${APP_WORKERS:-2} --timeout ${APP_TIMEOUT:-120}
+    healthCheckPath: /health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_PATH
+        value: /var/data/digitization.db
+      - key: APP_WORKERS
+        value: "2"
+      - key: APP_TIMEOUT
+        value: "120"
+    disks:
+      - name: digitization-data
+        mountPath: /var/data
+        sizeGB: 1

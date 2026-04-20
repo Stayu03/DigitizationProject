@@ -1,6 +1,7 @@
 """Flask application for the Digitization Process Management System."""
 
 import csv
+import os
 from io import StringIO, BytesIO
 from datetime import datetime
 
@@ -23,6 +24,7 @@ from database import (
     get_document,
     add_process_tracking,
     update_document_details,
+    delete_document,
     list_document_updates,
     list_status_counts,
     list_collection_options,
@@ -33,7 +35,7 @@ from database import (
 app = Flask(__name__, template_folder="pages")
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.jinja_env.auto_reload = True
-app.secret_key = "your-secret-key-change-in-production"
+app.secret_key = os.getenv("SECRET_KEY", "dev-only-secret-change-me")
 
 PROCESS_STATUSES = [
     "คัดเลือกเอกสาร",
@@ -45,8 +47,10 @@ PROCESS_STATUSES = [
     "นำไฟล์เอกสารเข้าระบบคลังสารสนเทศดิจิทัล Metadata ใน PDF",
 ]
 
-# Initialize database on startup
-conn = run_startup()
+# Initialize database on startup.
+# On Render, set DB_PATH to a persistent disk path such as /var/data/digitization.db.
+DB_PATH = os.getenv("DB_PATH", "data/digitization.db")
+conn = run_startup(DB_PATH)
 
 ACCOUNT_STATUS_LABELS = {
     "Active": "กำลังใช้งาน (Active)",
@@ -192,6 +196,12 @@ def index():
     return redirect(url_for("login"))
 
 
+@app.route("/health", methods=["GET"])
+def health():
+    """Basic application health check."""
+    return jsonify({"status": "ok"}), 200
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """User login page."""
@@ -326,6 +336,7 @@ def documents_list():
         status_filter=status_filter,
         sort_order=sort_order,
         status_options=status_options,
+        message=request.args.get("message", "").strip().lower(),
     )
 
 
@@ -685,7 +696,40 @@ def view_document(file_name):
         q=q,
         status_filter=status_filter,
         sort_order=sort_order,
+        message=request.args.get("message", "").strip().lower(),
+        error=request.args.get("error", "").strip().lower(),
+        can_delete_document=session.get("user_role") == "Admin",
     )
+
+
+@app.route("/documents/<file_name>/delete", methods=["POST"])
+@login_required
+def delete_document_page(file_name):
+    """Delete a document after confirming the current user's password."""
+    if session.get("user_role") != "Admin":
+        return "Forbidden", 403
+
+    doc = get_document(conn, file_name)
+    if not doc:
+        return "Document not found", 404
+
+    password = request.form.get("password", "")
+    next_page = request.form.get("next_page", "view_document").strip().lower()
+
+    current_email = (session.get("user_email") or "").strip().lower()
+    if not current_email or not password:
+        if next_page == "process_tracking":
+            return redirect(url_for("process_tracking_page", file_name=file_name, source="update", error="delete_auth_failed"))
+        return redirect(url_for("view_document", file_name=file_name, error="delete_auth_failed"))
+
+    current_user = authenticate_user(conn, current_email, password)
+    if not current_user:
+        if next_page == "process_tracking":
+            return redirect(url_for("process_tracking_page", file_name=file_name, source="update", error="delete_auth_failed"))
+        return redirect(url_for("view_document", file_name=file_name, error="delete_auth_failed"))
+
+    delete_document(conn, file_name)
+    return redirect(url_for("documents_list", message="deleted_document"))
 
 
 @app.route("/documents/<file_name>/process-tracking", methods=["GET", "POST"])

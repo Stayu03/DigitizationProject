@@ -877,6 +877,17 @@ def update_document_details(
     conn.commit()
 
 
+def delete_document(conn: sqlite3.Connection, file_name: str) -> None:
+    """Delete a document and all related process tracking history."""
+    normalized_file_name = (file_name or "").strip()
+    if not normalized_file_name:
+        return
+
+    conn.execute("DELETE FROM process_tracking WHERE file_name = ?", (normalized_file_name,))
+    conn.execute("DELETE FROM documents WHERE file_name = ?", (normalized_file_name,))
+    conn.commit()
+
+
 def list_document_updates(conn: sqlite3.Connection, file_name: str) -> list[dict[str, Any]]:
     """List all update transactions for a document with responsible user."""
     has_updated_by = _tracking_has_updated_by(conn)

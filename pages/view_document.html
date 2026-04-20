@@ -13,6 +13,14 @@
       margin-bottom: 14px;
     }
 
+    .top-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
     .update-btn {
       display: inline-flex;
       align-items: center;
@@ -24,6 +32,21 @@
       padding: 10px 14px;
       font-size: 16px;
       font-weight: 500;
+    }
+
+    .delete-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #d64545;
+      color: #fff;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 16px;
+      font-weight: 500;
+      font-family: "Kanit", sans-serif;
+      cursor: pointer;
     }
 
     .update-icon {
@@ -129,14 +152,91 @@
       margin-top: 4px;
       line-height: 1.2;
     }
+
+    .delete-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(47, 49, 51, 0.38);
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .delete-modal.is-open {
+      display: flex;
+    }
+
+    .delete-dialog {
+      width: min(460px, 100%);
+      border-radius: 16px;
+      background: #fff;
+      padding: 22px;
+      box-shadow: 0 18px 48px rgba(47, 49, 51, 0.2);
+    }
+
+    .delete-title {
+      margin: 0 0 8px;
+      font-size: 22px;
+      font-weight: 500;
+      color: #1f2022;
+    }
+
+    .delete-help {
+      margin: 0 0 12px;
+      color: #4f545a;
+      font-size: 15px;
+    }
+
+    .delete-password {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid #d7dbe1;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 16px;
+      font-family: "Kanit", sans-serif;
+      margin-bottom: 14px;
+    }
+
+    .delete-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .cancel-btn {
+      border: 0;
+      border-radius: 10px;
+      height: 42px;
+      padding: 0 14px;
+      background: #58595b;
+      color: #fff;
+      font-family: "Kanit", sans-serif;
+      font-size: 15px;
+      cursor: pointer;
+    }
   </style>
+
+  {% if error == 'delete_auth_failed' %}
+  <div class="page-alert-placeholder" data-page-alert-message="รหัสผ่านไม่ถูกต้อง ไม่สามารถลบเอกสารได้"></div>
+  {% endif %}
 
   <div class="detail-top">
     <div class="doc-title-box">{{ document.title or '-' }}</div>
-    <a class="update-btn" href="{{ url_for('process_tracking_page', file_name=document.file_name, source='update') }}">
-      <svg class="update-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75l11-11-3.75-3.75-11 11zM20.71 7.04a1.001 1.001 0 0 0 0-1.42l-2.34-2.34a1.001 1.001 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
-      <span>อัปเดตรายละเอียดข้อมูล/สถานะ</span>
-    </a>
+    <div class="top-actions">
+      {% if can_delete_document %}
+      <button class="delete-btn" type="button" id="openDeleteModalBtn">
+        <svg class="update-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 14H7L6 7zm3-3h6l1 2h4v2H4V6h4l1-2z"/></svg>
+        <span>ลบเอกสาร</span>
+      </button>
+      {% endif %}
+      <a class="update-btn" href="{{ url_for('process_tracking_page', file_name=document.file_name, source='update') }}">
+        <svg class="update-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75l11-11-3.75-3.75-11 11zM20.71 7.04a1.001 1.001 0 0 0 0-1.42l-2.34-2.34a1.001 1.001 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
+        <span>อัปเดตรายละเอียดข้อมูล/สถานะ</span>
+      </a>
+    </div>
   </div>
 
   <div class="detail-grid">
@@ -262,5 +362,57 @@
       {% endfor %}
     </tbody>
   </table>
+
+  {% if can_delete_document %}
+  <div class="delete-modal" id="deleteDocumentModal" aria-hidden="true">
+    <div class="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteDocumentTitle">
+      <h3 class="delete-title" id="deleteDocumentTitle">ยืนยันการลบเอกสาร</h3>
+      <p class="delete-help">การลบจะลบข้อมูลเอกสารและประวัติการอัปเดตทั้งหมด กรุณาใส่รหัสผ่านผู้ใช้เพื่อยืนยัน</p>
+      <form method="post" action="{{ url_for('delete_document_page', file_name=document.file_name) }}">
+        <input type="hidden" name="next_page" value="view_document">
+        <input class="delete-password" type="password" name="password" placeholder="รหัสผ่านผู้ใช้" required>
+        <div class="delete-actions">
+          <button class="cancel-btn" type="button" id="closeDeleteModalBtn">ยกเลิก</button>
+          <button class="delete-btn" type="submit">ยืนยันลบเอกสาร</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <script>
+    (function () {
+      var modal = document.getElementById("deleteDocumentModal");
+      var openBtn = document.getElementById("openDeleteModalBtn");
+      var closeBtn = document.getElementById("closeDeleteModalBtn");
+
+      function closeModal() {
+        if (!modal) {
+          return;
+        }
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+      }
+
+      if (openBtn && modal) {
+        openBtn.addEventListener("click", function () {
+          modal.classList.add("is-open");
+          modal.setAttribute("aria-hidden", "false");
+        });
+      }
+
+      if (closeBtn) {
+        closeBtn.addEventListener("click", closeModal);
+      }
+
+      if (modal) {
+        modal.addEventListener("click", function (event) {
+          if (event.target === modal) {
+            closeModal();
+          }
+        });
+      }
+    })();
+  </script>
 </section>
 {% endblock %}

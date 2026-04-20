@@ -4,6 +4,10 @@
 
 {% block content %}
 <section class="card">
+  {% if message == 'deleted_document' %}
+  <div class="page-alert-placeholder" data-page-alert-message="ลบเอกสารเรียบร้อยแล้ว"></div>
+  {% endif %}
+
   <style>
     .doc-actions {
       display: flex;
