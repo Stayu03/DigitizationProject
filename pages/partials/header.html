@@ -32,10 +32,158 @@
 
   <div class="header-user">
     <div class="user-name-box">{{ session.get('user_name', 'User') }}</div>
-    <a class="logout-link" href="{{ url_for('logout') }}" title="Logout" aria-label="Logout">
+    <button class="logout-link" type="button" id="openLogoutModalBtn" title="Logout" aria-label="Logout">
       <svg class="logout-icon" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5v-2H5V5h5V3zm9.71 8.29-3-3-1.41 1.41L15.59 11H9v2h6.59l-1.29 1.29 1.41 1.41 3-3a1 1 0 0 0 0-1.41z"/>
       </svg>
-    </a>
+    </button>
   </div>
 </header>
+
+<div class="logout-modal" id="logoutConfirmModal" aria-hidden="true">
+  <div class="logout-dialog" role="dialog" aria-modal="true" aria-labelledby="logoutConfirmTitle">
+    <h3 class="logout-title" id="logoutConfirmTitle">ยืนยันการออกจากระบบ</h3>
+    <p class="logout-help">ต้องการออกจากระบบตอนนี้ใช่หรือไม่</p>
+    <div class="logout-actions">
+      <button class="logout-cancel-btn" type="button" id="closeLogoutModalBtn">ยกเลิก</button>
+      <form method="post" action="{{ url_for('logout') }}">
+        <button class="logout-confirm-btn" type="submit">ออกจากระบบ</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  .logout-link {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--pink);
+    text-decoration: none;
+    border: 1px solid #f0d2de;
+    box-shadow: 0 3px 10px rgba(222, 92, 142, 0.18);
+    cursor: pointer;
+    padding: 0;
+    appearance: none;
+  }
+
+  .logout-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(222, 92, 142, 0.25);
+  }
+
+  .logout-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    flex: 0 0 auto;
+  }
+
+  .logout-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(47, 49, 51, 0.38);
+    z-index: 1100;
+    padding: 20px;
+  }
+
+  .logout-modal.is-open {
+    display: flex;
+  }
+
+  .logout-dialog {
+    width: min(420px, 100%);
+    border-radius: 16px;
+    background: #fff;
+    padding: 22px;
+    box-shadow: 0 18px 48px rgba(47, 49, 51, 0.2);
+  }
+
+  .logout-title {
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 500;
+    color: #1f2022;
+  }
+
+  .logout-help {
+    margin: 0 0 14px;
+    color: #4f545a;
+    font-size: 15px;
+  }
+
+  .logout-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .logout-cancel-btn,
+  .logout-confirm-btn {
+    border: 0;
+    border-radius: 10px;
+    height: 42px;
+    padding: 0 14px;
+    font-family: "Kanit", sans-serif;
+    font-size: 15px;
+    cursor: pointer;
+    color: #fff;
+  }
+
+  .logout-cancel-btn {
+    background: #58595b;
+  }
+
+  .logout-confirm-btn {
+    background: #d64545;
+  }
+</style>
+
+<script>
+  (function () {
+    var modal = document.getElementById("logoutConfirmModal");
+    var openBtn = document.getElementById("openLogoutModalBtn");
+    var closeBtn = document.getElementById("closeLogoutModalBtn");
+
+    function closeModal() {
+      if (!modal) {
+        return;
+      }
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    if (openBtn && modal) {
+      openBtn.addEventListener("click", function () {
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+      });
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener("click", closeModal);
+    }
+
+    if (modal) {
+      modal.addEventListener("click", function (event) {
+        if (event.target === modal) {
+          closeModal();
+        }
+      });
+    }
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        closeModal();
+      }
+    });
+  })();
+</script>

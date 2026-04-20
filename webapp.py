@@ -223,7 +223,7 @@ def login():
     return render_template("login.html")
 
 
-@app.route("/logout", methods=["GET"])
+@app.route("/logout", methods=["GET", "POST"])
 def logout():
     """User logout."""
     session.clear()
